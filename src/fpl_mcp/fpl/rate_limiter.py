@@ -1,14 +1,15 @@
-import time
 import asyncio
-from typing import List
+import time
 
 from ..config import RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_PERIOD_SECONDS
+
 
 class RateLimiter:
     """
     A simple rate limiter to prevent excessive requests to the FPL API.
     Tracks request times and enforces a maximum number of requests per time window.
     """
+
     def __init__(self, max_requests: int = 20, per_seconds: int = 60):
         """
         Initialize the rate limiter.
@@ -17,7 +18,7 @@ class RateLimiter:
             max_requests: Maximum number of requests allowed in the time window
             per_seconds: Time window in seconds
         """
-        self.request_times: List[float] = []
+        self.request_times: list[float] = []
         self.max_requests = max_requests
         self.time_window = per_seconds
         self._lock = asyncio.Lock()

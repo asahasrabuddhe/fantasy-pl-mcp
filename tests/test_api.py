@@ -1,10 +1,9 @@
-import pytest
-import asyncio
-import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import httpx
+import pytest
 import respx
+
 
 # Test bootstrap static API
 @pytest.mark.asyncio
@@ -14,13 +13,13 @@ async def test_bootstrap_static_api():
     This test mocks the HTTP request to avoid actual API calls in CI.
     """
     from fpl_mcp.fpl.api import FPLAPI
-    
+
     # Create a mock response for bootstrap static
     mock_data = {
         "elements": [
             {
-                "id": 1, 
-                "first_name": "Mohamed", 
+                "id": 1,
+                "first_name": "Mohamed",
                 "second_name": "Salah",
                 "web_name": "Salah",
                 "team": 14,
@@ -53,13 +52,13 @@ async def test_bootstrap_static_api():
                 "cost_change_start": 0,
                 "status": "a",
                 "news": "",
-                "chance_of_playing_next_round": 100
+                "chance_of_playing_next_round": 100,
             }
         ],
         "teams": [
             {
                 "id": 14,
-                "name": "Liverpool", 
+                "name": "Liverpool",
                 "short_name": "LIV",
                 "code": 10,
                 "strength": 5,
@@ -75,7 +74,7 @@ async def test_bootstrap_static_api():
                 "draw": 5,
                 "loss": 5,
                 "points": 65,
-                "form": "WWDLW"
+                "form": "WWDLW",
             }
         ],
         "element_types": [
@@ -84,20 +83,12 @@ async def test_bootstrap_static_api():
                 "singular_name": "Midfielder",
                 "singular_name_short": "MID",
                 "plural_name": "Midfielders",
-                "plural_name_short": "MIDs"
+                "plural_name_short": "MIDs",
             }
         ],
-        "phases": [
-            {
-                "id": 1,
-                "name": "Overall",
-                "start_event": 1,
-                "stop_event": 38,
-                "highest_score": None
-            }
-        ]
+        "phases": [{"id": 1, "name": "Overall", "start_event": 1, "stop_event": 38, "highest_score": None}],
     }
-    
+
     with respx.mock:
         respx.get("https://fantasy.premierleague.com/api/bootstrap-static/").mock(
             return_value=httpx.Response(200, json=mock_data)
@@ -115,14 +106,15 @@ async def test_bootstrap_static_api():
         assert len(data["elements"]) == 1
         assert data["elements"][0]["first_name"] == "Mohamed"
         assert data["elements"][0]["second_name"] == "Salah"
-        
+
         assert "teams" in data
         assert len(data["teams"]) == 1
         assert data["teams"][0]["name"] == "Liverpool"
-        
+
         assert "element_types" in data
         assert len(data["element_types"]) == 1
         assert data["element_types"][0]["singular_name"] == "Midfielder"
+
 
 @pytest.mark.asyncio
 async def test_player_formatting():
@@ -130,15 +122,15 @@ async def test_player_formatting():
     Test that players are formatted correctly for MCP resources.
     This test uses mock data to avoid actual API calls.
     """
-    from fpl_mcp.fpl.resources.players import get_players_resource
     from fpl_mcp.fpl.api import api
-    
+    from fpl_mcp.fpl.resources.players import get_players_resource
+
     # Create mock bootstrap static data
     mock_data = {
         "elements": [
             {
-                "id": 1, 
-                "first_name": "Mohamed", 
+                "id": 1,
+                "first_name": "Mohamed",
                 "second_name": "Salah",
                 "web_name": "Salah",
                 "team": 14,
@@ -172,36 +164,23 @@ async def test_player_formatting():
                 "cost_change_start": 0,
                 "status": "a",
                 "news": "",
-                "chance_of_playing_next_round": 100
+                "chance_of_playing_next_round": 100,
             }
         ],
-        "teams": [
-            {
-                "id": 14,
-                "name": "Liverpool",
-                "short_name": "LIV",
-                "code": 10
-            }
-        ],
-        "element_types": [
-            {
-                "id": 3,
-                "singular_name": "Midfielder",
-                "singular_name_short": "MID"
-            }
-        ]
+        "teams": [{"id": 14, "name": "Liverpool", "short_name": "LIV", "code": 10}],
+        "element_types": [{"id": 3, "singular_name": "Midfielder", "singular_name_short": "MID"}],
     }
-    
+
     # Mock the api.get_bootstrap_static method
-    with patch.object(api, 'get_bootstrap_static', return_value=mock_data):
+    with patch.object(api, "get_bootstrap_static", return_value=mock_data):
         # Call the function that uses the API
         players = await get_players_resource()
-        
+
         # Assertions
         assert len(players) == 1
         player = players[0]
         assert player["name"] == "Mohamed Salah"
-        assert player["team"] == "Liverpool" 
+        assert player["team"] == "Liverpool"
         assert player["position"] == "MID"
         assert player["price"] == 13.0  # now_cost is in tenths
         assert player["points"] == 200

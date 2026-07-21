@@ -1,8 +1,6 @@
 """Guard the public MCP surface: the __main__.py split must not change
 which tools are registered — clients bind to tool names."""
 
-import pytest
-
 EXPECTED_TOOLS = {
     # team.py
     "get_team",

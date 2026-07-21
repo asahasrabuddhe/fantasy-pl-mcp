@@ -1,7 +1,7 @@
 # src/fpl_mcp/fpl/tools/gameweeks.py
 import datetime
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from ..api import api
 from ..resources import fixtures
@@ -14,7 +14,7 @@ def register_tools(mcp):
     """Register gameweek tools with the MCP server"""
 
     @mcp.tool()
-    async def get_gameweek_status() -> Dict[str, Any]:
+    async def get_gameweek_status() -> dict[str, Any]:
         """Get precise information about current, previous, and next gameweeks
 
         Returns:
@@ -54,12 +54,12 @@ def register_tools(mcp):
             "season_progress": f"GW {current_gw and current_gw['id']}/38" if current_gw else "Unknown",
             "exact_timing": {
                 "current_deadline": current_gw and current_gw["deadline_time"],
-                "next_deadline": next_gw and next_gw["deadline_time"]
-            }
+                "next_deadline": next_gw and next_gw["deadline_time"],
+            },
         }
 
     @mcp.tool()
-    async def get_blank_gameweeks(num_gameweeks: int = 5) -> Dict[str, Any]:
+    async def get_blank_gameweeks(num_gameweeks: int = 5) -> dict[str, Any]:
         """Get information about upcoming blank gameweeks where teams don't have fixtures
 
         Args:
@@ -74,18 +74,15 @@ def register_tools(mcp):
         blank_gameweeks = await fixtures.get_blank_gameweeks(num_gameweeks)
 
         if not blank_gameweeks:
-            return {
-                "blank_gameweeks": [],
-                "summary": f"No blank gameweeks found in the next {num_gameweeks} gameweeks"
-            }
+            return {"blank_gameweeks": [], "summary": f"No blank gameweeks found in the next {num_gameweeks} gameweeks"}
 
         return {
             "blank_gameweeks": blank_gameweeks,
-            "summary": f"Found {len(blank_gameweeks)} blank gameweeks in the next {num_gameweeks} gameweeks"
+            "summary": f"Found {len(blank_gameweeks)} blank gameweeks in the next {num_gameweeks} gameweeks",
         }
 
     @mcp.tool()
-    async def get_double_gameweeks(num_gameweeks: int = 5) -> Dict[str, Any]:
+    async def get_double_gameweeks(num_gameweeks: int = 5) -> dict[str, Any]:
         """Get information about upcoming double gameweeks where teams play multiple times
 
         Args:
@@ -102,10 +99,10 @@ def register_tools(mcp):
         if not double_gameweeks:
             return {
                 "double_gameweeks": [],
-                "summary": f"No double gameweeks found in the next {num_gameweeks} gameweeks"
+                "summary": f"No double gameweeks found in the next {num_gameweeks} gameweeks",
             }
 
         return {
             "double_gameweeks": double_gameweeks,
-            "summary": f"Found {len(double_gameweeks)} double gameweeks in the next {num_gameweeks} gameweeks"
+            "summary": f"Found {len(double_gameweeks)} double gameweeks in the next {num_gameweeks} gameweeks",
         }

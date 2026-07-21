@@ -1,11 +1,9 @@
 """Helpers for working with gameweeks."""
 
-from typing import Optional
-
 from ..api import api
 
 
-async def get_current_gameweek_id() -> Optional[int]:
+async def get_current_gameweek_id() -> int | None:
     """Get the id of the current gameweek.
 
     Falls back to (next gameweek - 1) between gameweeks, mirroring the

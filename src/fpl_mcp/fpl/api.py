@@ -1,33 +1,35 @@
-import httpx
 import asyncio
 import json
-import jsonschema
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from .cache import cache, cached
-from .rate_limiter import rate_limiter
+import httpx
+import jsonschema
+
 from ..config import (
     FPL_API_BASE_URL,
     FPL_USER_AGENT,
     STATIC_SCHEMA_PATH,
 )
+from .cache import cached
+from .rate_limiter import rate_limiter
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
 
 class FPLAPI:
     """
     FPL API client with schema validation, caching, and rate limiting.
     Handles fetching data from the Fantasy Premier League API.
     """
-    def __init__(self, 
-                 base_url: str = FPL_API_BASE_URL,
-                 schema_path: str = STATIC_SCHEMA_PATH,
-                 user_agent: str = FPL_USER_AGENT):
+
+    def __init__(
+        self, base_url: str = FPL_API_BASE_URL, schema_path: str = STATIC_SCHEMA_PATH, user_agent: str = FPL_USER_AGENT
+    ):
         """
         Initialize the FPL API client.
-        
+
         Args:
             base_url: FPL API base URL
             schema_path: Path to JSON schema for validation
@@ -35,23 +37,20 @@ class FPLAPI:
         """
         self.base_url = base_url
         self.schema_path = schema_path
-        self.headers = {
-            "User-Agent": user_agent
-        }
+        self.headers = {"User-Agent": user_agent}
         self.rate_limiter = rate_limiter
-        self._client: Optional[httpx.AsyncClient] = None
-
+        self._client: httpx.AsyncClient | None = None
 
         # Load schema for bootstrap-static if available
         self.schema = None
         try:
-            with open(schema_path, 'r') as f:
+            with open(schema_path) as f:
                 schema_data = json.load(f)
-                self.schema = schema_data.get('schema')
+                self.schema = schema_data.get("schema")
                 logger.info(f"Loaded schema from {schema_path}")
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logger.warning(f"Could not load schema: {e}")
-    
+
     def _get_client(self) -> httpx.AsyncClient:
         """Get the shared HTTP client, creating it lazily on first use."""
         if self._client is None or self._client.is_closed:
@@ -91,7 +90,7 @@ class FPLAPI:
         url = f"{self.base_url}/{endpoint}"
         client = self._get_client()
 
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for attempt in range(max_retries):
             # Acquire rate limit permission for every attempt
             await self.rate_limiter.acquire()
@@ -111,83 +110,83 @@ class FPLAPI:
                 last_error = e
 
             if attempt < max_retries - 1:
-                backoff = 2 ** attempt
+                backoff = 2**attempt
                 logger.warning(f"Request to {url} failed ({last_error}); retrying in {backoff}s")
                 await asyncio.sleep(backoff)
 
         raise last_error
-    
-    def validate_data(self, data: Dict[str, Any], schema: Optional[Dict[str, Any]] = None) -> bool:
+
+    def validate_data(self, data: dict[str, Any], schema: dict[str, Any] | None = None) -> bool:
         """
         Validate data against JSON schema.
-        
+
         Args:
             data: Data to validate
             schema: Schema to validate against (uses self.schema if None)
-            
+
         Returns:
             True if validation succeeds, False otherwise
         """
         if not schema and not self.schema:
             logger.warning("No schema available for validation")
             return True
-            
+
         try:
             jsonschema.validate(instance=data, schema=schema or self.schema)
             return True
         except jsonschema.exceptions.ValidationError as e:
             logger.warning(f"Schema validation failed: {e}")
             return False
-    
+
     @cached("bootstrap_static")
-    async def get_bootstrap_static(self) -> Dict[str, Any]:
+    async def get_bootstrap_static(self) -> dict[str, Any]:
         """
         Get main FPL static data (players, teams, game settings).
         Uses caching with 1-hour TTL by default.
-        
+
         Returns:
             Bootstrap static data
         """
         data = await self._make_request("bootstrap-static/")
-        
+
         # Fix null values that should be integers according to schema
-        if 'phases' in data:
-            for phase in data['phases']:
-                if phase.get('highest_score') is None:
-                    phase['highest_score'] = 0
-        
+        if "phases" in data:
+            for phase in data["phases"]:
+                if phase.get("highest_score") is None:
+                    phase["highest_score"] = 0
+
         # Validate against schema if available
         if self.schema:
             self.validate_data(data)
-            
+
         return data
-    
+
     @cached("fixtures")
-    async def get_fixtures(self) -> List[Dict[str, Any]]:
+    async def get_fixtures(self) -> list[dict[str, Any]]:
         """
         Get fixture data for all matches.
-        
+
         Returns:
             List of fixtures
         """
         return await self._make_request("fixtures/")
-    
+
     @cached("gameweeks")
-    async def get_gameweeks(self) -> List[Dict[str, Any]]:
+    async def get_gameweeks(self) -> list[dict[str, Any]]:
         """
         Get all gameweeks data.
-        
+
         Returns:
             List of gameweeks
         """
         static_data = await self.get_bootstrap_static()
         return static_data.get("events", [])
-    
+
     @cached("current_gameweek", ttl=600)  # 10-minute TTL for current GW
-    async def get_current_gameweek(self) -> Dict[str, Any]:
+    async def get_current_gameweek(self) -> dict[str, Any]:
         """
         Get current gameweek data.
-        
+
         Returns:
             Current gameweek data or None if not found
         """
@@ -195,30 +194,30 @@ class FPLAPI:
         for gw in gameweeks:
             if gw.get("is_current", False):
                 return gw
-                
+
         # If no current gameweek found, return next one
         for gw in gameweeks:
             if gw.get("is_next", False):
                 return gw
-                
+
         # If no next gameweek either, return first one
         return gameweeks[0] if gameweeks else {}
-    
+
     @cached("element_summary")
-    async def get_player_summary(self, player_id: int) -> Dict[str, Any]:
+    async def get_player_summary(self, player_id: int) -> dict[str, Any]:
         """
         Get detailed data for a specific player.
-        
+
         Args:
             player_id: FPL player ID
-            
+
         Returns:
             Player summary data
         """
         return await self._make_request(f"element-summary/{player_id}/")
-        
+
     @cached("live_event", ttl=60)  # Live points change often during matches
-    async def get_live_event_data(self, gameweek_id: int) -> Dict[str, Any]:
+    async def get_live_event_data(self, gameweek_id: int) -> dict[str, Any]:
         """
         Get live player stats for a gameweek (points, minutes, bonus, etc.).
 
@@ -231,7 +230,7 @@ class FPLAPI:
         return await self._make_request(f"event/{gameweek_id}/live/")
 
     @cached("event_status", ttl=60)
-    async def get_event_status(self) -> Dict[str, Any]:
+    async def get_event_status(self) -> dict[str, Any]:
         """
         Get bonus/league processing status for the active gameweek.
 
@@ -241,7 +240,7 @@ class FPLAPI:
         return await self._make_request("event-status/")
 
     @cached("dream_team", ttl=600)
-    async def get_dream_team(self, gameweek_id: int) -> Dict[str, Any]:
+    async def get_dream_team(self, gameweek_id: int) -> dict[str, Any]:
         """
         Get the official dream team (highest-scoring XI) for a gameweek.
 
@@ -254,7 +253,7 @@ class FPLAPI:
         return await self._make_request(f"dream-team/{gameweek_id}/")
 
     @cached("entry_transfers", ttl=600)
-    async def get_entry_transfers(self, team_id: int) -> List[Dict[str, Any]]:
+    async def get_entry_transfers(self, team_id: int) -> list[dict[str, Any]]:
         """
         Get the full transfer history for a manager's team.
 
@@ -266,7 +265,7 @@ class FPLAPI:
         """
         return await self._make_request(f"entry/{team_id}/transfers/")
 
-    async def get_players(self) -> List[Dict[str, Any]]:
+    async def get_players(self) -> list[dict[str, Any]]:
         """
         Get all players data.
 
@@ -275,11 +274,11 @@ class FPLAPI:
         """
         static_data = await self.get_bootstrap_static()
         return static_data.get("elements", [])
-    
-    async def get_teams(self) -> List[Dict[str, Any]]:
+
+    async def get_teams(self) -> list[dict[str, Any]]:
         """
         Get all teams data.
-        
+
         Returns:
             List of team data
         """

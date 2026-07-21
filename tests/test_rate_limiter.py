@@ -46,6 +46,5 @@ async def test_concurrent_acquires_never_exceed_limit():
 def test_module_level_singleton_exists():
     """api.py and auth_manager.py must share one limiter instance."""
     from fpl_mcp.fpl.api import api
-    from fpl_mcp.fpl import auth_manager as am
 
     assert api.rate_limiter is rate_limiter

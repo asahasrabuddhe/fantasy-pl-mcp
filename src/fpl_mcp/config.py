@@ -1,6 +1,7 @@
 import os
 import pathlib
 from importlib import resources
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file if present
@@ -51,6 +52,4 @@ RATE_LIMIT_PERIOD_SECONDS = int(os.getenv("RATE_LIMIT_PERIOD_SECONDS", "60"))
 # higher than the old 25. LEAGUE_RESULTS_LIMIT is env-configurable but clamped
 # to a hard cap to stay polite to the FPL API.
 LEAGUE_RESULTS_HARD_CAP = 100
-LEAGUE_RESULTS_LIMIT = min(
-    int(os.getenv("LEAGUE_RESULTS_LIMIT", "50")), LEAGUE_RESULTS_HARD_CAP
-)
+LEAGUE_RESULTS_LIMIT = min(int(os.getenv("LEAGUE_RESULTS_LIMIT", "50")), LEAGUE_RESULTS_HARD_CAP)

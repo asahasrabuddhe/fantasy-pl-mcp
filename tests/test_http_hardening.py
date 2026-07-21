@@ -1,6 +1,5 @@
 """Tests for the shared HTTP client, timeouts, and retry behavior in FPLAPI."""
 
-import asyncio
 from unittest.mock import AsyncMock, patch
 
 import httpx

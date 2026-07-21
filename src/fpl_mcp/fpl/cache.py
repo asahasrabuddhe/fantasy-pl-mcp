@@ -1,28 +1,29 @@
-import time
-import os
-import pathlib
-from typing import Any, Callable, Dict, Optional, TypeVar, List
-from diskcache import Cache
 import asyncio
-from functools import wraps
-import json
 import logging
+import os
+from collections.abc import Callable
+from functools import wraps
+from typing import Any, TypeVar
+
+from diskcache import Cache
 
 from ..config import CACHE_DIR, CACHE_TTL
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 class FPLCache:
     """
     A disk-based caching system with TTL (Time To Live) for FPL API data.
     Uses diskcache for persistent storage between runs.
     """
+
     def __init__(self, cache_dir=CACHE_DIR, default_ttl=CACHE_TTL):
         """
         Initialize the cache.
-        
+
         Args:
             cache_dir: Directory to store cache files
             default_ttl: Default cache TTL in seconds (1 hour by default)
@@ -31,7 +32,7 @@ class FPLCache:
         os.makedirs(cache_dir, exist_ok=True)
         self.cache = Cache(str(cache_dir))
         self.default_ttl = default_ttl
-        self._locks: Dict[str, asyncio.Lock] = {}
+        self._locks: dict[str, asyncio.Lock] = {}
         self._locks_guard = asyncio.Lock()
 
     async def _get_lock(self, key: str) -> asyncio.Lock:
@@ -41,7 +42,7 @@ class FPLCache:
                 self._locks[key] = asyncio.Lock()
             return self._locks[key]
 
-    async def get_or_fetch(self, key: str, fetch_func: Callable[[], Any], ttl: Optional[float] = None) -> Any:
+    async def get_or_fetch(self, key: str, fetch_func: Callable[[], Any], ttl: float | None = None) -> Any:
         """
         Get from cache or fetch and cache the data.
         Uses locks to prevent concurrent fetches for the same key.
@@ -72,11 +73,11 @@ class FPLCache:
             data = await fetch_func()
             self.cache.set(namespaced_key, data, expire=ttl or self.default_ttl)
             return data
-    
-    def clear(self, key: Optional[str] = None) -> None:
+
+    def clear(self, key: str | None = None) -> None:
         """
         Clear cache entries.
-        
+
         Args:
             key: Specific key to clear, or all cache if None
         """
@@ -86,37 +87,34 @@ class FPLCache:
             for candidate in (f"v2:{key}", key):
                 if candidate in self.cache:
                     del self.cache[candidate]
-            
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
-        return {
-            "size": len(self.cache),
-            "directory": str(self.cache.directory),
-            "entries": list(self.cache.iterkeys())
-        }
+        return {"size": len(self.cache), "directory": str(self.cache.directory), "entries": list(self.cache.iterkeys())}
 
 
 # Create a singleton instance
 cache = FPLCache()
 
 
-def cached(key_prefix: str, ttl: Optional[float] = None):
+def cached(key_prefix: str, ttl: float | None = None):
     """
     Decorator for caching async function results.
-    
+
     Args:
         key_prefix: Prefix for cache key
         ttl: Optional TTL override
-        
+
     Returns:
         Decorator function
     """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # Create a cache key from function name, args, and kwargs
             key_parts = [key_prefix, func.__name__]
-            
+
             # Add stringified args and kwargs to key
             if args:
                 key_parts.append(str(args))
@@ -124,22 +122,23 @@ def cached(key_prefix: str, ttl: Optional[float] = None):
                 # Sort kwargs by key for consistent cache keys
                 sorted_kwargs = sorted(kwargs.items())
                 key_parts.append(str(sorted_kwargs))
-                
+
             cache_key = "_".join(key_parts)
-            
+
             # Define fetch function
             async def fetch_func():
                 return await func(*args, **kwargs)
-                
+
             return await cache.get_or_fetch(cache_key, fetch_func, ttl)
-            
+
         return wrapper
+
     return decorator
 
 
 async def get_cached_player_data():
     """Get cached complete player dataset with computed fields.
-    
+
     Returns:
         Complete player dataset with additional computed fields
     """
@@ -147,8 +146,9 @@ async def get_cached_player_data():
     return await cache.get_or_fetch(
         "complete_player_dataset",
         fetch_func=fetch_and_prepare_all_players,
-        ttl=3600  # Refresh hourly
+        ttl=3600,  # Refresh hourly
     )
+
 
 async def get_player_map():
     """Get a cached mapping of player ID -> raw bootstrap player element.
@@ -160,32 +160,33 @@ async def get_player_map():
     Returns:
         Dict mapping player ID to the raw player dict
     """
+
     async def build_map():
         from .api import api
+
         players = await api.get_players()
         return {p["id"]: p for p in players}
 
     return await cache.get_or_fetch(
         "player_id_map",
         fetch_func=build_map,
-        ttl=3600  # Refresh hourly, same cadence as bootstrap-static
+        ttl=3600,  # Refresh hourly, same cadence as bootstrap-static
     )
 
 
 async def fetch_and_prepare_all_players():
     """Fetch all players and add computed fields.
-    
+
     Returns:
         Enhanced player dataset with computed fields
     """
     # Get raw player data from API
-    from .api import api
     from .resources.players import get_players_resource
-    
+
     # Fetch complete player dataset with all fields
     logger.info("Fetching and preparing all players with computed fields")
     all_players = await get_players_resource()
-    
+
     # Add computed fields for each player
     for player in all_players:
         # Calculate value (points per million)
@@ -195,7 +196,7 @@ async def fetch_and_prepare_all_players():
             player["value"] = round(points / price, 2) if price > 0 else 0
         except (ValueError, TypeError, ZeroDivisionError):
             player["value"] = 0
-            
+
         # Other useful computed fields can be added here
-            
+
     return all_players

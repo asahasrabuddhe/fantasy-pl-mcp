@@ -1,107 +1,93 @@
 # src/fpl_mcp/fpl/tools/team.py
 import logging
-import time
-from typing import Dict, Any, Optional, List
+from typing import Any
 
-from ..auth_manager import get_auth_manager
 from ..api import api
+from ..auth_manager import get_auth_manager
 from ..cache import cache
 
 logger = logging.getLogger(__name__)
 
-async def get_team_for_gameweek(gameweek: Optional[int] = None, team_id: int = 0) -> Dict[str, Any]:
+
+async def get_team_for_gameweek(gameweek: int | None = None, team_id: int = 0) -> dict[str, Any]:
     """
     Get any FPL team for a specific gameweek with rich data
-    
+
     Args:
         gameweek: The gameweek number (defaults to current)
         team_id: FPL team ID to look up (required)
-        
+
     Returns:
         Detailed team information including player details
     """
     # Get auth manager for API access
     auth_manager = get_auth_manager()
-    
+
     # Check that we have a valid team ID
     if not team_id:
-        return {
-            "error": "No team ID specified",
-            "suggestion": "Please provide a valid team_id parameter"
-        }
-    
+        return {"error": "No team ID specified", "suggestion": "Please provide a valid team_id parameter"}
+
     logger.info(f"Getting team data for team {team_id}, gameweek {gameweek}")
-    
+
     # Use current gameweek if not specified
     if gameweek is None:
         current_gw_data = await api.get_current_gameweek()
         gameweek = current_gw_data.get("id", 1)  # Extract just the ID
-    
+
     # Ensure gameweek is an integer
     try:
         gameweek = int(gameweek)
     except (ValueError, TypeError):
         logger.error(f"Invalid gameweek value: {gameweek}")
         return {"error": f"Invalid gameweek value: {gameweek}"}
-    
+
     # Get team data for the gameweek
     try:
         gw_picks_data = await auth_manager.get_team_for_gameweek(team_id, gameweek)
     except Exception as e:
         logger.error(f"Error fetching team data: {e}")
-        return {
-            "error": f"Failed to retrieve team data for gameweek {gameweek}: {str(e)}"
-        }
-    
+        return {"error": f"Failed to retrieve team data for gameweek {gameweek}: {str(e)}"}
+
     # Get player data to enrich team information
     # Use the players, teams, and position resources for better caching
     all_players = await api.get_players()
     all_teams = await api.get_teams()
-    
+
     # Create lookup dictionaries
     players = {p["id"]: p for p in all_players}
     teams = {t["id"]: t for t in all_teams}
-    
+
     # Process team data
     picks = gw_picks_data.get("picks", [])
     entry_history = gw_picks_data.get("entry_history", {})
-    
+
     # Format each player
     formatted_picks = []
-    captain_id = None
-    vice_captain_id = None
-    
-    # Find captain and vice captain
-    for pick in picks:
-        if pick.get("is_captain"):
-            captain_id = pick.get("element")
-        if pick.get("is_vice_captain"):
-            vice_captain_id = pick.get("element")
-    
+
     # Format players with detailed info
     for pick in picks:
         player_id = pick.get("element")
         player_data = players.get(player_id, {})
-        
+
         if not player_data:
             logger.warning(f"Player {player_id} not found in bootstrap data")
             continue
-        
+
         # Get team ID from player data
         player_team_id = player_data.get("team")
-        
+
         # Look up team details using the team ID
         team_data = teams.get(player_team_id, {})
         team_name = team_data.get("name", "Unknown")
         team_short = team_data.get("short_name", "UNK")
-        
+
         # Extract position from player data
         position = player_data.get("element_type")
-        
+
         # Convert position ID to position code
         position_map = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
         position_code = position_map.get(position, "UNK")
-        
+
         # Create enriched player data
         formatted_player = {
             "id": player_id,
@@ -109,10 +95,10 @@ async def get_team_for_gameweek(gameweek: Optional[int] = None, team_id: int = 0
             "multiplier": pick.get("multiplier"),
             "is_captain": pick.get("is_captain", False),
             "is_vice_captain": pick.get("is_vice_captain", False),
-            
             # Player details - using field names from players.py resource
             "web_name": player_data.get("web_name", "Unknown"),
-            "full_name": f"{player_data.get('first_name', '')} {player_data.get('second_name', '')}".strip() or "Unknown",
+            "full_name": f"{player_data.get('first_name', '')} {player_data.get('second_name', '')}".strip()
+            or "Unknown",
             "price": player_data.get("now_cost", 0) / 10.0 if player_data.get("now_cost") else 0,
             "form": player_data.get("form", "0.0"),
             "points_per_game": player_data.get("points_per_game", "0.0"),
@@ -124,26 +110,25 @@ async def get_team_for_gameweek(gameweek: Optional[int] = None, team_id: int = 0
             "bonus": player_data.get("bonus", 0),
             "status": player_data.get("status"),
             "news": player_data.get("news", ""),
-            
             # Team details
             "team": team_name,
             "team_short": team_short,
-            
             # Position details
             "position": position_code,
         }
-        
+
         formatted_picks.append(formatted_player)
-    
+
     # Sort by position order
     formatted_picks.sort(key=lambda p: p["position_order"])
-    
+
     # Split into active and bench
     active_players = [p for p in formatted_picks if p["multiplier"] > 0]
     bench_players = [p for p in formatted_picks if p["multiplier"] == 0]
-    
+
     # Try to get team manager information
     try:
+
         async def fetch_manager_info():
             entry_data = await auth_manager.get_entry_data(team_id)
             return {
@@ -165,7 +150,7 @@ async def get_team_for_gameweek(gameweek: Optional[int] = None, team_id: int = 0
             "team_name": "Unknown",
             "manager_name": "Unknown",
         }
-    
+
     # Build full result
     result = {
         "gameweek": gameweek,
@@ -177,7 +162,7 @@ async def get_team_for_gameweek(gameweek: Optional[int] = None, team_id: int = 0
         "captain": next((p for p in formatted_picks if p["is_captain"]), None),
         "vice_captain": next((p for p in formatted_picks if p["is_vice_captain"]), None),
     }
-    
+
     # Add gameweek history data if available
     if entry_history:
         result["points"] = entry_history.get("points", 0)
@@ -190,16 +175,17 @@ async def get_team_for_gameweek(gameweek: Optional[int] = None, team_id: int = 0
             "made": entry_history.get("event_transfers", 0),
             "cost": entry_history.get("event_transfers_cost", 0),
         }
-    
+
     return result
 
-async def get_manager_info(team_id: int) -> Dict[str, Any]:
+
+async def get_manager_info(team_id: int) -> dict[str, Any]:
     """
     Get detailed information about a team manager
-    
+
     Args:
         team_id: FPL team ID to look up
-        
+
     Returns:
         Manager information including history, name, and team details
     """
@@ -207,6 +193,7 @@ async def get_manager_info(team_id: int) -> Dict[str, Any]:
     auth_manager = get_auth_manager()
 
     try:
+
         async def fetch_manager_info():
             entry_data = await auth_manager.get_entry_data(team_id)
             return {
@@ -224,8 +211,8 @@ async def get_manager_info(team_id: int) -> Dict[str, Any]:
                 "leagues": {
                     "classic": entry_data.get("leagues", {}).get("classic", []),
                     "h2h": entry_data.get("leagues", {}).get("h2h", []),
-                    "cup": entry_data.get("leagues", {}).get("cup", {})
-                }
+                    "cup": entry_data.get("leagues", {}).get("cup", {}),
+                },
             }
 
         # 1 hour cache
@@ -238,16 +225,17 @@ async def get_manager_info(team_id: int) -> Dict[str, Any]:
         logger.error(f"Error fetching manager info for team {team_id}: {e}")
         return {"error": f"Failed to retrieve manager info: {str(e)}"}
 
+
 # Register these as MCP tools
 def register_tools(mcp):
     @mcp.tool()
-    async def get_team(team_id: int, gameweek: Optional[int] = None) -> Dict[str, Any]:
+    async def get_team(team_id: int, gameweek: int | None = None) -> dict[str, Any]:
         """Get any team's players, captain, and other details for a specific gameweek
-        
+
         Args:
             team_id: FPL team ID (required)
             gameweek: Gameweek number (defaults to current gameweek)
-            
+
         Returns:
             Detailed team information including player details, captain, and value
         """
@@ -257,17 +245,17 @@ def register_tools(mcp):
         except Exception as e:
             logger.error(f"Error in get_team: {e}")
             return {"error": str(e)}
-    
+
     @mcp.tool()
-    async def get_my_team(gameweek: Optional[int] = None) -> Dict[str, Any]:
+    async def get_my_team(gameweek: int | None = None) -> dict[str, Any]:
         """Get your own FPL team for a specific gameweek
-        
+
         Args:
             gameweek: Gameweek number (defaults to current gameweek)
-            
+
         Returns:
             Detailed team information including player details, captain, and value
-            
+
         Note:
             This uses your authenticated team ID from the FPL credentials.
             To get another team's details, use get_team and provide a team_id.
@@ -276,21 +264,21 @@ def register_tools(mcp):
             # Get the authenticated user's team ID
             auth_manager = get_auth_manager()
             team_id = auth_manager.team_id
-            
+
             if not team_id:
                 return {
                     "error": "No default team ID found in credentials",
-                    "suggestion": "Check your authentication settings or use get_team with an explicit team_id"
+                    "suggestion": "Check your authentication settings or use get_team with an explicit team_id",
                 }
-                
+
             logger.info(f"Getting authenticated user's team: {team_id}")
             return await get_team_for_gameweek(gameweek, team_id)
         except Exception as e:
             logger.error(f"Error in get_my_team: {e}")
             return {"error": str(e)}
-            
+
     @mcp.tool()
-    async def get_manager(team_id: int) -> Dict[str, Any]:
+    async def get_manager(team_id: int) -> dict[str, Any]:
         """Get detailed information about an FPL manager
 
         Args:
@@ -306,7 +294,7 @@ def register_tools(mcp):
             return {"error": str(e)}
 
     @mcp.tool()
-    async def get_my_current_team() -> Dict[str, Any]:
+    async def get_my_current_team() -> dict[str, Any]:
         """Get your current team as shown on the transfers page, including
         selling prices, chips, and transfer state (requires authentication)
 
@@ -325,7 +313,7 @@ def register_tools(mcp):
             if not team_id:
                 return {
                     "error": "No team ID found in credentials",
-                    "setup_instructions": "Run 'fpl-mcp-config setup' to configure your FPL credentials"
+                    "setup_instructions": "Run 'fpl-mcp-config setup' to configure your FPL credentials",
                 }
 
             data = await auth_manager.get_my_team(int(team_id))
@@ -336,25 +324,24 @@ def register_tools(mcp):
             for pick in data.get("picks", []):
                 pid = pick.get("element")
                 info = player_map.get(pid, {})
-                picks.append({
-                    "id": pid,
-                    "name": info.get("web_name", f"Player {pid}"),
-                    "position": positions.get(info.get("element_type"), "UNK"),
-                    "purchase_price": pick.get("purchase_price", 0) / 10.0,
-                    "selling_price": pick.get("selling_price", 0) / 10.0,
-                    "is_captain": pick.get("is_captain", False),
-                    "is_vice_captain": pick.get("is_vice_captain", False),
-                    "on_bench": pick.get("position", 0) > 11,
-                })
+                picks.append(
+                    {
+                        "id": pid,
+                        "name": info.get("web_name", f"Player {pid}"),
+                        "position": positions.get(info.get("element_type"), "UNK"),
+                        "purchase_price": pick.get("purchase_price", 0) / 10.0,
+                        "selling_price": pick.get("selling_price", 0) / 10.0,
+                        "is_captain": pick.get("is_captain", False),
+                        "is_vice_captain": pick.get("is_vice_captain", False),
+                        "on_bench": pick.get("position", 0) > 11,
+                    }
+                )
 
             transfers = data.get("transfers", {})
             return {
                 "team_id": int(team_id),
                 "picks": picks,
-                "chips": [
-                    {"name": c.get("name"), "status": c.get("status_for_entry")}
-                    for c in data.get("chips", [])
-                ],
+                "chips": [{"name": c.get("name"), "status": c.get("status_for_entry")} for c in data.get("chips", [])],
                 "transfers": {
                     "free_transfers_available": transfers.get("limit"),
                     "made_this_gameweek": transfers.get("made", 0),
@@ -366,11 +353,11 @@ def register_tools(mcp):
             logger.error(f"Error in get_my_current_team: {e}")
             return {
                 "error": str(e),
-                "suggestion": "This endpoint requires valid FPL credentials; run 'fpl-mcp-config setup'"
+                "suggestion": "This endpoint requires valid FPL credentials; run 'fpl-mcp-config setup'",
             }
 
     @mcp.tool()
-    async def check_fpl_authentication() -> Dict[str, Any]:
+    async def check_fpl_authentication() -> dict[str, Any]:
         """Check if FPL authentication is working correctly
 
         Returns:
@@ -384,7 +371,7 @@ def register_tools(mcp):
                 return {
                     "authenticated": False,
                     "error": "No team ID found in credentials",
-                    "setup_instructions": "Run 'fpl-mcp-config setup' to configure your FPL credentials"
+                    "setup_instructions": "Run 'fpl-mcp-config setup' to configure your FPL credentials",
                 }
 
             # Try to get basic team info as authentication test
@@ -396,13 +383,13 @@ def register_tools(mcp):
                     "team_name": entry_data.get("name"),
                     "manager_name": f"{entry_data.get('player_first_name')} {entry_data.get('player_last_name')}",
                     "overall_rank": entry_data.get("summary_overall_rank"),
-                    "team_id": team_id
+                    "team_id": team_id,
                 }
             except Exception as e:
                 return {
                     "authenticated": False,
                     "error": f"Authentication failed: {str(e)}",
-                    "setup_instructions": "Check your FPL credentials and ensure they are correct"
+                    "setup_instructions": "Check your FPL credentials and ensure they are correct",
                 }
 
         except Exception as e:
@@ -414,7 +401,7 @@ def register_tools(mcp):
             }
 
     @mcp.tool()
-    async def update_fpl_credentials(refresh_token: str, team_id: str = "") -> Dict[str, Any]:
+    async def update_fpl_credentials(refresh_token: str, team_id: str = "") -> dict[str, Any]:
         """Store a new FPL refresh token when the current one has expired.
 
         Use this when authenticated FPL tools fail with an invalid/expired refresh

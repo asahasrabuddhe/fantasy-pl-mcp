@@ -4,7 +4,6 @@ transfer history, price changes, captain suggestions)."""
 from unittest.mock import AsyncMock, patch
 
 import httpx
-import pytest
 import respx
 
 from fpl_mcp.fpl.api import api
@@ -13,27 +12,57 @@ BASE = "https://fantasy.premierleague.com/api"
 
 RAW_PLAYERS = [
     {
-        "id": 1, "web_name": "Salah", "team": 14, "element_type": 3,
-        "now_cost": 130, "cost_change_event": 1, "cost_change_start": 5,
-        "selected_by_percent": "55.0", "transfers_in_event": 200000,
-        "transfers_out_event": 10000, "form": "9.0", "points_per_game": "8.0",
-        "ep_next": "8.5", "status": "a", "news": "",
+        "id": 1,
+        "web_name": "Salah",
+        "team": 14,
+        "element_type": 3,
+        "now_cost": 130,
+        "cost_change_event": 1,
+        "cost_change_start": 5,
+        "selected_by_percent": "55.0",
+        "transfers_in_event": 200000,
+        "transfers_out_event": 10000,
+        "form": "9.0",
+        "points_per_game": "8.0",
+        "ep_next": "8.5",
+        "status": "a",
+        "news": "",
         "chance_of_playing_next_round": None,
     },
     {
-        "id": 2, "web_name": "Haaland", "team": 13, "element_type": 4,
-        "now_cost": 150, "cost_change_event": 0, "cost_change_start": 2,
-        "selected_by_percent": "80.0", "transfers_in_event": 50000,
-        "transfers_out_event": 60000, "form": "7.0", "points_per_game": "7.5",
-        "ep_next": "7.0", "status": "d", "news": "Knock",
+        "id": 2,
+        "web_name": "Haaland",
+        "team": 13,
+        "element_type": 4,
+        "now_cost": 150,
+        "cost_change_event": 0,
+        "cost_change_start": 2,
+        "selected_by_percent": "80.0",
+        "transfers_in_event": 50000,
+        "transfers_out_event": 60000,
+        "form": "7.0",
+        "points_per_game": "7.5",
+        "ep_next": "7.0",
+        "status": "d",
+        "news": "Knock",
         "chance_of_playing_next_round": 75,
     },
     {
-        "id": 3, "web_name": "Raya", "team": 1, "element_type": 1,
-        "now_cost": 55, "cost_change_event": -1, "cost_change_start": -2,
-        "selected_by_percent": "20.0", "transfers_in_event": 1000,
-        "transfers_out_event": 90000, "form": "4.0", "points_per_game": "4.0",
-        "ep_next": "4.5", "status": "a", "news": "",
+        "id": 3,
+        "web_name": "Raya",
+        "team": 1,
+        "element_type": 1,
+        "now_cost": 55,
+        "cost_change_event": -1,
+        "cost_change_start": -2,
+        "selected_by_percent": "20.0",
+        "transfers_in_event": 1000,
+        "transfers_out_event": 90000,
+        "form": "4.0",
+        "points_per_game": "4.0",
+        "ep_next": "4.5",
+        "status": "a",
+        "news": "",
         "chance_of_playing_next_round": None,
     },
 ]
@@ -46,12 +75,42 @@ TEAMS = [
 
 LIVE_DATA = {
     "elements": [
-        {"id": 1, "stats": {"total_points": 13, "minutes": 90, "goals_scored": 2,
-                            "assists": 0, "bonus": 3, "bps": 60, "in_dreamteam": True}},
-        {"id": 2, "stats": {"total_points": 2, "minutes": 90, "goals_scored": 0,
-                            "assists": 0, "bonus": 0, "bps": 12, "in_dreamteam": False}},
-        {"id": 3, "stats": {"total_points": 0, "minutes": 0, "goals_scored": 0,
-                            "assists": 0, "bonus": 0, "bps": 0, "in_dreamteam": False}},
+        {
+            "id": 1,
+            "stats": {
+                "total_points": 13,
+                "minutes": 90,
+                "goals_scored": 2,
+                "assists": 0,
+                "bonus": 3,
+                "bps": 60,
+                "in_dreamteam": True,
+            },
+        },
+        {
+            "id": 2,
+            "stats": {
+                "total_points": 2,
+                "minutes": 90,
+                "goals_scored": 0,
+                "assists": 0,
+                "bonus": 0,
+                "bps": 12,
+                "in_dreamteam": False,
+            },
+        },
+        {
+            "id": 3,
+            "stats": {
+                "total_points": 0,
+                "minutes": 0,
+                "goals_scored": 0,
+                "assists": 0,
+                "bonus": 0,
+                "bps": 0,
+                "in_dreamteam": False,
+            },
+        },
     ]
 }
 
@@ -67,9 +126,7 @@ def patch_static():
 
 async def test_live_event_api_method():
     with respx.mock:
-        route = respx.get(f"{BASE}/event/7/live/").mock(
-            return_value=httpx.Response(200, json=LIVE_DATA)
-        )
+        route = respx.get(f"{BASE}/event/7/live/").mock(return_value=httpx.Response(200, json=LIVE_DATA))
         data = await api.get_live_event_data(7)
         assert data == LIVE_DATA
         assert route.call_count == 1
@@ -82,25 +139,26 @@ async def test_live_event_api_method():
 
 async def test_entry_transfers_api_method():
     transfers = [
-        {"element_in": 1, "element_in_cost": 128, "element_out": 3,
-         "element_out_cost": 55, "event": 7, "time": "2026-07-01T10:00:00Z"},
+        {
+            "element_in": 1,
+            "element_in_cost": 128,
+            "element_out": 3,
+            "element_out_cost": 55,
+            "event": 7,
+            "time": "2026-07-01T10:00:00Z",
+        },
     ]
     with respx.mock:
-        respx.get(f"{BASE}/entry/12345/transfers/").mock(
-            return_value=httpx.Response(200, json=transfers)
-        )
+        respx.get(f"{BASE}/entry/12345/transfers/").mock(return_value=httpx.Response(200, json=transfers))
         data = await api.get_entry_transfers(12345)
         assert data == transfers
     await api.close()
 
 
 async def test_dream_team_api_method():
-    payload = {"top_player": {"id": 1, "points": 13},
-               "team": [{"element": 1, "points": 13, "position": 1}]}
+    payload = {"top_player": {"id": 1, "points": 13}, "team": [{"element": 1, "points": 13, "position": 1}]}
     with respx.mock:
-        respx.get(f"{BASE}/dream-team/7/").mock(
-            return_value=httpx.Response(200, json=payload)
-        )
+        respx.get(f"{BASE}/dream-team/7/").mock(return_value=httpx.Response(200, json=payload))
         data = await api.get_dream_team(7)
         assert data["top_player"]["id"] == 1
     await api.close()
@@ -116,6 +174,7 @@ class ToolCollector:
         def decorator(fn):
             self.tools[fn.__name__] = fn
             return fn
+
         return decorator
 
 
@@ -129,10 +188,14 @@ async def test_get_gameweek_live_scores_tool():
     from fpl_mcp.fpl.tools.live import register_tools
 
     tools = collect(register_tools)
-    with patch_static(), \
-         patch("fpl_mcp.fpl.api.FPLAPI.get_live_event_data", new=AsyncMock(return_value=LIVE_DATA)), \
-         patch("fpl_mcp.fpl.api.FPLAPI.get_event_status", new=AsyncMock(return_value={
-             "status": [{"event": 7, "bonus_added": False}]})):
+    with (
+        patch_static(),
+        patch("fpl_mcp.fpl.api.FPLAPI.get_live_event_data", new=AsyncMock(return_value=LIVE_DATA)),
+        patch(
+            "fpl_mcp.fpl.api.FPLAPI.get_event_status",
+            new=AsyncMock(return_value={"status": [{"event": 7, "bonus_added": False}]}),
+        ),
+    ):
         result = await tools["get_gameweek_live_scores"](gameweek_id=7)
 
     assert result["gameweek"] == 7
@@ -147,9 +210,11 @@ async def test_get_gameweek_live_scores_filters_by_player_ids():
     from fpl_mcp.fpl.tools.live import register_tools
 
     tools = collect(register_tools)
-    with patch_static(), \
-         patch("fpl_mcp.fpl.api.FPLAPI.get_live_event_data", new=AsyncMock(return_value=LIVE_DATA)), \
-         patch("fpl_mcp.fpl.api.FPLAPI.get_event_status", new=AsyncMock(return_value={"status": []})):
+    with (
+        patch_static(),
+        patch("fpl_mcp.fpl.api.FPLAPI.get_live_event_data", new=AsyncMock(return_value=LIVE_DATA)),
+        patch("fpl_mcp.fpl.api.FPLAPI.get_event_status", new=AsyncMock(return_value={"status": []})),
+    ):
         result = await tools["get_gameweek_live_scores"](gameweek_id=7, player_ids=[2, 3])
 
     # Requested players are kept even with 0 minutes
@@ -160,10 +225,11 @@ async def test_get_dream_team_tool():
     from fpl_mcp.fpl.tools.live import register_tools
 
     tools = collect(register_tools)
-    payload = {"top_player": {"id": 1, "points": 13},
-               "team": [{"element": 1, "points": 13}, {"element": 2, "points": 2}]}
-    with patch_static(), \
-         patch("fpl_mcp.fpl.api.FPLAPI.get_dream_team", new=AsyncMock(return_value=payload)):
+    payload = {
+        "top_player": {"id": 1, "points": 13},
+        "team": [{"element": 1, "points": 13}, {"element": 2, "points": 2}],
+    }
+    with patch_static(), patch("fpl_mcp.fpl.api.FPLAPI.get_dream_team", new=AsyncMock(return_value=payload)):
         result = await tools["get_dream_team"](gameweek_id=7)
 
     assert result["top_player"]["name"] == "Salah"
@@ -176,13 +242,24 @@ async def test_get_manager_transfer_history_tool():
 
     tools = collect(register_tools)
     transfers = [
-        {"element_in": 1, "element_in_cost": 128, "element_out": 3,
-         "element_out_cost": 55, "event": 7, "time": "2026-07-01T10:00:00Z"},
-        {"element_in": 2, "element_in_cost": 150, "element_out": 1,
-         "element_out_cost": 130, "event": 6, "time": "2026-06-24T10:00:00Z"},
+        {
+            "element_in": 1,
+            "element_in_cost": 128,
+            "element_out": 3,
+            "element_out_cost": 55,
+            "event": 7,
+            "time": "2026-07-01T10:00:00Z",
+        },
+        {
+            "element_in": 2,
+            "element_in_cost": 150,
+            "element_out": 1,
+            "element_out_cost": 130,
+            "event": 6,
+            "time": "2026-06-24T10:00:00Z",
+        },
     ]
-    with patch_static(), \
-         patch("fpl_mcp.fpl.api.FPLAPI.get_entry_transfers", new=AsyncMock(return_value=transfers)):
+    with patch_static(), patch("fpl_mcp.fpl.api.FPLAPI.get_entry_transfers", new=AsyncMock(return_value=transfers)):
         result = await tools["get_manager_transfer_history"](team_id=12345)
 
     assert result["total_transfers"] == 2
@@ -222,20 +299,24 @@ async def test_suggest_captain_tool():
     from fpl_mcp.fpl.tools.advice import register_tools
 
     tools = collect(register_tools)
-    picks = {"picks": [
-        {"element": 1, "is_captain": False},
-        {"element": 2, "is_captain": True},
-        {"element": 3, "is_captain": False},
-    ]}
+    picks = {
+        "picks": [
+            {"element": 1, "is_captain": False},
+            {"element": 2, "is_captain": True},
+            {"element": 3, "is_captain": False},
+        ]
+    }
     fixtures = [{"gameweek": 8, "difficulty": 2, "location": "home", "opponent": "X"}]
 
     mock_auth = AsyncMock()
     mock_auth.team_id = "999"
     mock_auth.get_team_for_gameweek = AsyncMock(return_value=picks)
 
-    with patch_static(), \
-         patch("fpl_mcp.fpl.tools.advice.get_auth_manager", return_value=mock_auth), \
-         patch("fpl_mcp.fpl.tools.advice.get_player_fixtures", new=AsyncMock(return_value=fixtures)):
+    with (
+        patch_static(),
+        patch("fpl_mcp.fpl.tools.advice.get_auth_manager", return_value=mock_auth),
+        patch("fpl_mcp.fpl.tools.advice.get_player_fixtures", new=AsyncMock(return_value=fixtures)),
+    ):
         result = await tools["suggest_captain"](gameweek_id=7)
 
     assert result["team_id"] == 999

@@ -52,10 +52,7 @@ async def test_decisions_analysis_does_not_crash():
 async def test_limit_caps_teams_analyzed():
     many_teams = {
         "league_info": {"id": 1, "name": "Test League"},
-        "standings": [
-            {"team_id": i, "team_name": f"T{i}", "manager_name": f"M{i}"}
-            for i in range(20)
-        ],
+        "standings": [{"team_id": i, "team_name": f"T{i}", "manager_name": f"M{i}"} for i in range(20)],
     }
     get_history = AsyncMock(return_value={"teams_data": {}})
 

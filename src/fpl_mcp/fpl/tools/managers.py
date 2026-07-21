@@ -1,13 +1,13 @@
 # src/fpl_mcp/fpl/tools/managers.py
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..auth_manager import get_auth_manager
 
 logger = logging.getLogger(__name__)
 
 
-async def get_manager_data(team_id: Optional[int] = None) -> Dict[str, Any]:
+async def get_manager_data(team_id: int | None = None) -> dict[str, Any]:
     """
     Get raw manager data from the FPL API
 
@@ -23,9 +23,7 @@ async def get_manager_data(team_id: Optional[int] = None) -> Dict[str, Any]:
     if team_id is None:
         team_id = auth_manager.team_id
         if not team_id:
-            return {
-                "error": "No team ID specified and no default team ID found"
-            }
+            return {"error": "No team ID specified and no default team ID found"}
 
     # Get manager data
     try:
@@ -36,10 +34,10 @@ async def get_manager_data(team_id: Optional[int] = None) -> Dict[str, Any]:
         return {"error": f"Failed to retrieve manager data: {str(e)}"}
 
 
-def parse_manager_basic_info(data: Dict[str, Any]) -> Dict[str, Any]:
+def parse_manager_basic_info(data: dict[str, Any]) -> dict[str, Any]:
     """Parse basic manager information"""
-    first_name = data.get('player_first_name', '')
-    last_name = data.get('player_last_name', '')
+    first_name = data.get("player_first_name", "")
+    last_name = data.get("player_last_name", "")
     return {
         "team_id": data.get("id"),
         "team_name": data.get("name"),
@@ -53,7 +51,7 @@ def parse_manager_basic_info(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def parse_manager_performance(data: Dict[str, Any]) -> Dict[str, Any]:
+def parse_manager_performance(data: dict[str, Any]) -> dict[str, Any]:
     """Parse manager performance information"""
     return {
         "overall_points": data.get("summary_overall_points"),
@@ -61,21 +59,13 @@ def parse_manager_performance(data: Dict[str, Any]) -> Dict[str, Any]:
         "current_event": data.get("current_event"),
         "current_event_points": data.get("summary_event_points"),
         "current_event_rank": data.get("summary_event_rank"),
-        "team_value": (
-            data.get("last_deadline_value", 0) / 10
-            if data.get("last_deadline_value")
-            else None
-        ),
-        "bank": (
-            data.get("last_deadline_bank", 0) / 10
-            if data.get("last_deadline_bank")
-            else None
-        ),
+        "team_value": (data.get("last_deadline_value", 0) / 10 if data.get("last_deadline_value") else None),
+        "bank": (data.get("last_deadline_bank", 0) / 10 if data.get("last_deadline_bank") else None),
         "total_transfers": data.get("last_deadline_total_transfers"),
     }
 
 
-def parse_manager_leagues(data: Dict[str, Any]) -> Dict[str, Any]:
+def parse_manager_leagues(data: dict[str, Any]) -> dict[str, Any]:
     """Parse manager league information"""
     leagues = data.get("leagues", {})
     classic_leagues = leagues.get("classic", [])
@@ -104,26 +94,10 @@ def parse_manager_leagues(data: Dict[str, Any]) -> Dict[str, Any]:
 
         parsed_match = {
             "event": match.get("event"),
-            "opponent_name": (
-                match.get("entry_1_name")
-                if not is_entry1
-                else match.get("entry_2_name")
-            ),
-            "opponent_id": (
-                match.get("entry_1_entry")
-                if not is_entry1
-                else match.get("entry_2_entry")
-            ),
-            "user_points": (
-                match.get("entry_1_points")
-                if is_entry1
-                else match.get("entry_2_points")
-            ),
-            "opponent_points": (
-                match.get("entry_2_points")
-                if is_entry1
-                else match.get("entry_1_points")
-            ),
+            "opponent_name": (match.get("entry_1_name") if not is_entry1 else match.get("entry_2_name")),
+            "opponent_id": (match.get("entry_1_entry") if not is_entry1 else match.get("entry_2_entry")),
+            "user_points": (match.get("entry_1_points") if is_entry1 else match.get("entry_2_points")),
+            "opponent_points": (match.get("entry_2_points") if is_entry1 else match.get("entry_1_points")),
             "result": "win" if match.get("winner") == my_entry else "loss",
             "knockout_name": match.get("knockout_name"),
         }
@@ -148,7 +122,7 @@ def parse_manager_leagues(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-async def _get_manager_info(team_id: Optional[int] = None) -> Dict[str, Any]:
+async def _get_manager_info(team_id: int | None = None) -> dict[str, Any]:
     """Get detailed information about an FPL manager"""
     # Get raw manager data
     data = await get_manager_data(team_id)
@@ -163,20 +137,14 @@ async def _get_manager_info(team_id: Optional[int] = None) -> Dict[str, Any]:
     leagues = parse_manager_leagues(data)
 
     # Return combined data
-    return {
-        "basic_info": basic_info,
-        "performance": performance,
-        "leagues": leagues
-    }
+    return {"basic_info": basic_info, "performance": performance, "leagues": leagues}
 
 
 def register_tools(mcp):
     """Register manager tools with the MCP server"""
 
     @mcp.tool()
-    async def get_manager_info(
-        team_id: Optional[int] = None
-    ) -> Dict[str, Any]:
+    async def get_manager_info(team_id: int | None = None) -> dict[str, Any]:
         """Get detailed information about an FPL manager
 
         Args:
@@ -188,10 +156,7 @@ def register_tools(mcp):
         return await _get_manager_info(team_id)
 
     @mcp.tool()
-    async def get_manager_transfer_history(
-        team_id: int,
-        limit: int = 50
-    ) -> Dict[str, Any]:
+    async def get_manager_transfer_history(team_id: int, limit: int = 50) -> dict[str, Any]:
         """Get a manager's transfer history with player names and prices
 
         Args:
@@ -219,7 +184,7 @@ def register_tools(mcp):
             return player_map.get(pid, {}).get("web_name", f"Player {pid}")
 
         formatted = []
-        by_gameweek: Dict[int, List[Dict[str, Any]]] = {}
+        by_gameweek: dict[int, list[dict[str, Any]]] = {}
         for t in transfers[:limit]:
             entry = {
                 "gameweek": t.get("event"),
@@ -237,7 +202,5 @@ def register_tools(mcp):
             "total_transfers": len(transfers),
             "transfers_returned": len(formatted),
             "transfers": formatted,
-            "transfers_by_gameweek": {
-                str(gw): items for gw, items in sorted(by_gameweek.items(), reverse=True)
-            },
+            "transfers_by_gameweek": {str(gw): items for gw, items in sorted(by_gameweek.items(), reverse=True)},
         }

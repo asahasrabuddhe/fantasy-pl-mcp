@@ -5,8 +5,7 @@ Some MCP clients pass tool arguments wrapped in a dict (e.g.
 its own copy of the unwrapping boilerplate; this module centralizes it.
 """
 
-from typing import Any, Optional
-
+from typing import Any
 
 _MISSING = object()
 

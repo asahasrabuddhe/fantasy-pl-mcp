@@ -6,8 +6,8 @@ from fpl_mcp.fpl.utils.difficulty import assess_fixtures, fixture_score, score_f
 from fpl_mcp.fpl.utils.gameweek import get_current_gameweek_id
 from fpl_mcp.fpl.utils.params import unwrap
 
-
 # --- difficulty ---
+
 
 def test_fixture_score_formula():
     # avg difficulty 2 -> (6-2)*2 = 8
@@ -38,6 +38,7 @@ def test_assessment_ladder():
 
 
 # --- params.unwrap ---
+
 
 def test_unwrap_passthrough():
     assert unwrap("Salah", "player_name") == "Salah"

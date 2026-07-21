@@ -1,18 +1,18 @@
-import pytest
 import os
 import sys
 
 # Add the src directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
+
 def test_package_structure():
     """Test that the package structure is correct."""
     # Check that src directory exists
     assert os.path.isdir(os.path.join(os.path.dirname(__file__), "../src")), "src directory should exist"
-    
+
     # Check that fpl_mcp package directory exists
     assert os.path.isdir(os.path.join(os.path.dirname(__file__), "../src/fpl_mcp")), "fpl_mcp package should exist"
-    
+
     # Check that key files exist
     key_files = [
         "../src/fpl_mcp/__init__.py",
@@ -21,23 +21,25 @@ def test_package_structure():
         "../src/fpl_mcp/fpl/api.py",
         "../src/fpl_mcp/fpl/cache.py",
         "../src/fpl_mcp/fpl/rate_limiter.py",
-        "../pyproject.toml"
+        "../pyproject.toml",
     ]
-    
+
     for file_path in key_files:
         full_path = os.path.join(os.path.dirname(__file__), file_path)
         assert os.path.isfile(full_path), f"{file_path} should exist"
-    
+
     # Check that package can be imported
     import fpl_mcp
+
     assert hasattr(fpl_mcp, "__version__"), "Package should have __version__ attribute"
     # Don't pin the exact number here — just require a sane semver-ish string
     assert isinstance(fpl_mcp.__version__, str) and fpl_mcp.__version__.count(".") == 2
 
+
 def test_config_module():
     """Test that the config module has the expected attributes."""
     from fpl_mcp import config
-    
+
     # Check that config module has expected attributes
     expected_attributes = [
         "FPL_API_BASE_URL",
@@ -47,12 +49,12 @@ def test_config_module():
         "SCHEMAS_DIR",
         "STATIC_SCHEMA_PATH",
         "RATE_LIMIT_MAX_REQUESTS",
-        "RATE_LIMIT_PERIOD_SECONDS"
+        "RATE_LIMIT_PERIOD_SECONDS",
     ]
-    
+
     for attr in expected_attributes:
         assert hasattr(config, attr), f"Config should have {attr} attribute"
-    
+
     # Check some values
     assert config.FPL_API_BASE_URL == "https://fantasy.premierleague.com/api", "API URL should be correct"
     assert isinstance(config.CACHE_TTL, int), "CACHE_TTL should be an integer"

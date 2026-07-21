@@ -52,9 +52,7 @@ async def test_concurrent_fetches_deduplicate():
         await asyncio.sleep(0.05)
         return "value"
 
-    results = await asyncio.gather(
-        *(cache.get_or_fetch("key", fetch) for _ in range(8))
-    )
+    results = await asyncio.gather(*(cache.get_or_fetch("key", fetch) for _ in range(8)))
 
     assert all(r == "value" for r in results)
     assert calls == 1

@@ -9,10 +9,10 @@ that formula and the standard assessment ladder.
 with different thresholds; that is intentionally separate behavior.)
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 
-def fixture_score(fixtures: List[Dict[str, Any]], key: str = "difficulty") -> float:
+def fixture_score(fixtures: list[dict[str, Any]], key: str = "difficulty") -> float:
     """Convert a list of fixtures into a 0-10 attractiveness score.
 
     Args:

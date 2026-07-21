@@ -1,9 +1,9 @@
 # src/fpl_mcp/cli.py
+import argparse
+import asyncio
+import getpass
 import os
 import sys
-import argparse
-import getpass
-import asyncio
 from pathlib import Path
 
 from .fpl.credential_manager import extract_refresh_token
@@ -118,41 +118,42 @@ def setup_credentials():
         # Check if legacy credentials exist and offer to clean them up
         legacy_files = []
         config_dir = Path.home() / ".fpl-mcp"
-        
+
         if (config_dir / ".env").exists():
             legacy_files.append(str(config_dir / ".env"))
         if (config_dir / "config.json").exists():
             legacy_files.append(str(config_dir / "config.json"))
-            
+
         if legacy_files:
             print("\nLegacy credential files detected:")
             for file in legacy_files:
                 print(f"  - {file}")
             print("\nThese files contain plaintext credentials and are no longer needed.")
             remove_legacy = input("Would you like to remove them? (y/N): ").lower()
-            
-            if remove_legacy == 'y':
+
+            if remove_legacy == "y":
                 for file in legacy_files:
                     try:
                         os.remove(file)
                         print(f"Removed: {file}")
                     except Exception as e:
                         print(f"Could not remove {file}: {e}")
-        
+
         print("Configuration successful!")
         return True
-        
+
     except Exception as e:
         print(f"Error saving encrypted credentials: {e}")
         print("You may need to install the cryptography library: pip install cryptography")
         return False
+
 
 async def test_auth():
     """Test authentication with FPL API"""
     try:
         # Import here to avoid circular imports
         from .fpl.auth_manager import get_auth_manager
-        
+
         auth_manager = get_auth_manager()
 
         if not auth_manager._refresh_token or not auth_manager.team_id:
@@ -181,8 +182,9 @@ async def test_auth():
         # Clean up resources
         try:
             await auth_manager.close()
-        except:
+        except Exception:
             pass
+
 
 def main():
     parser = argparse.ArgumentParser(description="FPL MCP Server Configuration")
@@ -192,13 +194,14 @@ def main():
     subparsers.add_parser("test", help="Test FPL authentication")
 
     args = parser.parse_args()
-    
+
     if args.command == "setup":
         setup_credentials()
     elif args.command == "test":
         asyncio.run(test_auth())
     else:
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()

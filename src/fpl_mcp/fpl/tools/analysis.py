@@ -1,7 +1,7 @@
 # src/fpl_mcp/fpl/tools/analysis.py
 import logging
 from collections import Counter
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..cache import get_cached_player_data
 from ..resources import fixtures, players
@@ -24,20 +24,20 @@ def register_tools(mcp):
 
     @mcp.tool()
     async def analyze_players(
-        position: Optional[str] = None,
-        team: Optional[str] = None,
-        min_price: Optional[float] = None,
-        max_price: Optional[float] = None,
-        min_points: Optional[int] = None,
-        min_ownership: Optional[float] = None,
-        max_ownership: Optional[float] = None,
-        form_threshold: Optional[float] = None,
+        position: str | None = None,
+        team: str | None = None,
+        min_price: float | None = None,
+        max_price: float | None = None,
+        min_points: int | None = None,
+        min_ownership: float | None = None,
+        max_ownership: float | None = None,
+        form_threshold: float | None = None,
         include_gameweeks: bool = False,
         num_gameweeks: int = 5,
         sort_by: str = "points",
         sort_order: str = "desc",
-        limit: int = 20
-    ) -> Dict[str, Any]:
+        limit: int = 20,
+    ) -> dict[str, Any]:
         """Filter and analyze FPL players based on multiple criteria
 
         Args:
@@ -92,8 +92,7 @@ def register_tools(mcp):
 
             # Check team filter
             if team and not (
-                team.lower() in player.get("team", "").lower() or
-                team.lower() in player.get("team_short", "").lower()
+                team.lower() in player.get("team", "").lower() or team.lower() in player.get("team_short", "").lower()
             ):
                 continue
 
@@ -127,7 +126,7 @@ def register_tools(mcp):
                 # Skip form check if value can't be converted
                 pass
 
-            player['status'] = "available" if player.get("status") == "a" else "unavailable"
+            player["status"] = "available" if player.get("status") == "a" else "unavailable"
 
             # Player passed all filters
             filtered_players.append(player)
@@ -139,21 +138,13 @@ def register_tools(mcp):
             numeric_fields = ["points", "price", "form", "selected_by_percent", "value"]
             if sort_by in numeric_fields:
                 filtered_players.sort(
-                    key=lambda p: float(p.get(sort_by, 0))
-                    if p.get(sort_by) is not None else 0,
-                    reverse=reverse
+                    key=lambda p: float(p.get(sort_by, 0)) if p.get(sort_by) is not None else 0, reverse=reverse
                 )
             else:
-                filtered_players.sort(
-                    key=lambda p: p.get(sort_by, ""),
-                    reverse=reverse
-                )
+                filtered_players.sort(key=lambda p: p.get(sort_by, ""), reverse=reverse)
         except (KeyError, ValueError):
             # Fall back to points sorting
-            filtered_players.sort(
-                key=lambda p: float(p.get("points", 0)),
-                reverse=True
-            )
+            filtered_players.sort(key=lambda p: float(p.get("points", 0)), reverse=True)
 
         # Calculate summary statistics
         total_players = len(filtered_players)
@@ -191,13 +182,11 @@ def register_tools(mcp):
                 "average_points": round(average_points, 1),
                 "average_price": round(average_price, 2),
                 "position_distribution": dict(position_counts),
-                "team_distribution": dict(sorted(
-                    team_counts.items(),
-                    key=lambda x: x[1],
-                    reverse=True
-                )[:10]),  # Top 10 teams
+                "team_distribution": dict(
+                    sorted(team_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+                ),  # Top 10 teams
             },
-            "players": filtered_players[:limit]  # Apply limit to detailed results
+            "players": filtered_players[:limit],  # Apply limit to detailed results
         }
 
         # Add position normalization note if relevant
@@ -240,7 +229,7 @@ def register_tools(mcp):
                             "expected_assists": 0,
                             "expected_goal_involvements": 0,
                             "points_per_game": 0,
-                            "gameweeks_analyzed": gameweek_data.get("gameweeks", [])
+                            "gameweeks_analyzed": gameweek_data.get("gameweeks", []),
                         }
 
                         # Sum up stats from gameweek history
@@ -262,14 +251,16 @@ def register_tools(mcp):
                         # Round floating point values
                         recent_stats["expected_goals"] = round(recent_stats["expected_goals"], 2)
                         recent_stats["expected_assists"] = round(recent_stats["expected_assists"], 2)
-                        recent_stats["expected_goal_involvements"] = round(recent_stats["expected_goal_involvements"], 2)
+                        recent_stats["expected_goal_involvements"] = round(
+                            recent_stats["expected_goal_involvements"], 2
+                        )
 
                         recent_form_stats[str(player_id)] = recent_stats
 
                 # Add recent form stats to result
                 result["recent_form"] = {
                     "description": f"Stats for the last {num_gameweeks} gameweeks only",
-                    "player_stats": recent_form_stats
+                    "player_stats": recent_form_stats,
                 }
 
                 # Add labels to clarify which stats are season-long vs. recent
@@ -284,12 +275,12 @@ def register_tools(mcp):
 
     @mcp.tool()
     async def compare_players(
-        player_names: List[str],
-        metrics: List[str] = ["points", "form", "goals", "assists", "bonus"],
+        player_names: list[str],
+        metrics: list[str] = ["points", "form", "goals", "assists", "bonus"],
         include_gameweeks: bool = False,
         num_gameweeks: int = 5,
-        include_fixture_analysis: bool = True
-    ) -> Dict[str, Any]:
+        include_fixture_analysis: bool = True,
+    ) -> dict[str, Any]:
         """Compare multiple players across various metrics
 
         Args:
@@ -311,15 +302,14 @@ def register_tools(mcp):
                 return {"error": "Could not find player names in the provided data"}
 
         metrics = unwrap(
-            metrics, "metrics",
+            metrics,
+            "metrics",
             default=["points", "form", "goals", "assists", "bonus"],
         )
         metrics = [_METRIC_ALIASES.get(m, m) for m in metrics]
         include_gameweeks = unwrap(include_gameweeks, "include_gameweeks", default=False)
         num_gameweeks = unwrap(num_gameweeks, "num_gameweeks", default=5)
-        include_fixture_analysis = unwrap(
-            include_fixture_analysis, "include_fixture_analysis", default=True
-        )
+        include_fixture_analysis = unwrap(include_fixture_analysis, "include_fixture_analysis", default=True)
 
         if not player_names or len(player_names) < 2:
             return {"error": "Please provide at least two player names to compare"}
@@ -346,9 +336,10 @@ def register_tools(mcp):
                     "price": player["price"],
                     "status": "available" if player["status"] == "a" else "unavailable",
                     "news": player.get("news", ""),
-                } for name, player in players_data.items()
+                }
+                for name, player in players_data.items()
             },
-            "metrics_comparison": {}
+            "metrics_comparison": {},
         }
 
         # Compare all requested metrics
@@ -400,7 +391,7 @@ def register_tools(mcp):
                             "expected_goals": 0,
                             "expected_assists": 0,
                             "expected_goal_involvements": 0,
-                            "points_per_game": 0
+                            "points_per_game": 0,
                         }
 
                         # Sum up stats from gameweek history
@@ -422,7 +413,9 @@ def register_tools(mcp):
                         # Round floating point values
                         recent_stats["expected_goals"] = round(recent_stats["expected_goals"], 2)
                         recent_stats["expected_assists"] = round(recent_stats["expected_assists"], 2)
-                        recent_stats["expected_goal_involvements"] = round(recent_stats["expected_goal_involvements"], 2)
+                        recent_stats["expected_goal_involvements"] = round(
+                            recent_stats["expected_goal_involvements"], 2
+                        )
 
                         recent_form_comparison[name] = recent_stats
 
@@ -435,7 +428,7 @@ def register_tools(mcp):
                     comparison["recent_form_comparison"] = {
                         "description": f"Aggregated stats for the last {num_gameweeks} gameweeks only",
                         "gameweeks_analyzed": gameweek_range,
-                        "player_stats": recent_form_comparison
+                        "player_stats": recent_form_comparison,
                     }
 
                     # Add best performer for recent form metrics
@@ -450,10 +443,7 @@ def register_tools(mcp):
 
                     # Add label to metrics to indicate they're season-long stats
                     for metric, values in comparison["metrics_comparison"].items():
-                        comparison["metrics_comparison"][metric] = {
-                            "stats_type": "season_totals",
-                            "values": values
-                        }
+                        comparison["metrics_comparison"][metric] = {"stats_type": "season_totals", "values": values}
             except Exception as e:
                 logger.error(f"Error fetching gameweek comparison: {e}")
                 comparison["gameweek_comparison_error"] = str(e)
@@ -477,13 +467,19 @@ def register_tools(mcp):
 
                     # Format fixture data
                     fixtures_data = []
-                    if "fixture_analysis" in player_fixture_analysis and "fixtures_analyzed" in player_fixture_analysis["fixture_analysis"]:
+                    if (
+                        "fixture_analysis" in player_fixture_analysis
+                        and "fixtures_analyzed" in player_fixture_analysis["fixture_analysis"]
+                    ):
                         fixtures_data = player_fixture_analysis["fixture_analysis"]["fixtures_analyzed"]
 
                     fixture_comparison[name] = fixtures_data
 
                     # Store fixture difficulty score
-                    if "fixture_analysis" in player_fixture_analysis and "difficulty_score" in player_fixture_analysis["fixture_analysis"]:
+                    if (
+                        "fixture_analysis" in player_fixture_analysis
+                        and "difficulty_score" in player_fixture_analysis["fixture_analysis"]
+                    ):
                         fixture_scores[name] = player_fixture_analysis["fixture_analysis"]["difficulty_score"]
 
                     # Check for blank gameweeks
@@ -503,10 +499,12 @@ def register_tools(mcp):
                     for double_gw in double_gws:
                         for team_info in double_gw.get("teams_with_doubles", []):
                             if team_info.get("name") == team_name:
-                                double_impact.append({
-                                    "gameweek": double_gw["gameweek"],
-                                    "fixture_count": team_info.get("fixture_count", 2)
-                                })
+                                double_impact.append(
+                                    {
+                                        "gameweek": double_gw["gameweek"],
+                                        "fixture_count": team_info.get("fixture_count", 2),
+                                    }
+                                )
 
                     double_gameweek_impacts[name] = double_impact
 
@@ -519,7 +517,7 @@ def register_tools(mcp):
                     "upcoming_fixtures": fixture_comparison,
                     "fixture_scores": fixture_scores,
                     "blank_gameweeks": blank_gameweek_impacts,
-                    "double_gameweeks": double_gameweek_impacts
+                    "double_gameweeks": double_gameweek_impacts,
                 }
 
                 # Add fixture advantage assessment
@@ -530,7 +528,7 @@ def register_tools(mcp):
                     comparison["fixture_comparison"]["fixture_advantage"] = {
                         "best_fixtures": best_fixtures_player,
                         "worst_fixtures": worst_fixtures_player,
-                        "advantage": f"{best_fixtures_player} has easier upcoming fixtures than {worst_fixtures_player}"
+                        "advantage": f"{best_fixtures_player} has easier upcoming fixtures than {worst_fixtures_player}",
                     }
 
         # Add summary of who's best for each metric
@@ -560,13 +558,17 @@ def register_tools(mcp):
             player_wins[best_name] = player_wins.get(best_name, 0) + 1
 
         # Add fixture advantage to wins if available
-        if include_fixture_analysis and "fixture_comparison" in comparison and "fixture_advantage" in comparison["fixture_comparison"]:
+        if (
+            include_fixture_analysis
+            and "fixture_comparison" in comparison
+            and "fixture_advantage" in comparison["fixture_comparison"]
+        ):
             best_fixtures_player = comparison["fixture_comparison"]["fixture_advantage"]["best_fixtures"]
             player_wins[best_fixtures_player] = player_wins.get(best_fixtures_player, 0) + 1
 
         comparison["summary"] = {
             "metrics_won": player_wins,
-            "overall_best": max(player_wins.items(), key=lambda x: x[1])[0] if player_wins else None
+            "overall_best": max(player_wins.items(), key=lambda x: x[1])[0] if player_wins else None,
         }
 
         return comparison

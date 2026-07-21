@@ -1,6 +1,6 @@
 # src/fpl_mcp/fpl/tools/live.py
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..api import api
 from ..cache import get_player_map
@@ -17,6 +17,7 @@ async def _team_name_maps():
         {t["id"]: t.get("short_name", "") for t in teams},
     )
 
+
 _POSITIONS = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
 
 
@@ -25,10 +26,8 @@ def register_tools(mcp):
 
     @mcp.tool()
     async def get_gameweek_live_scores(
-        gameweek_id: Optional[int] = None,
-        player_ids: Optional[List[int]] = None,
-        limit: int = 25
-    ) -> Dict[str, Any]:
+        gameweek_id: int | None = None, player_ids: list[int] | None = None, limit: int = 25
+    ) -> dict[str, Any]:
         """Get live player points and stats for a gameweek while matches are being played
 
         Args:
@@ -67,26 +66,28 @@ def register_tools(mcp):
 
             stats = element.get("stats", {})
             info = player_map.get(pid, {})
-            players.append({
-                "id": pid,
-                "name": info.get("web_name", f"Player {pid}"),
-                "team": team_names.get(info.get("team"), "Unknown"),
-                "team_short": team_short.get(info.get("team"), ""),
-                "position": _POSITIONS.get(info.get("element_type"), "UNK"),
-                "points": stats.get("total_points", 0),
-                "minutes": stats.get("minutes", 0),
-                "goals": stats.get("goals_scored", 0),
-                "assists": stats.get("assists", 0),
-                "clean_sheets": stats.get("clean_sheets", 0),
-                "saves": stats.get("saves", 0),
-                "bonus": stats.get("bonus", 0),
-                "bps": stats.get("bps", 0),
-                "yellow_cards": stats.get("yellow_cards", 0),
-                "red_cards": stats.get("red_cards", 0),
-                "expected_goals": stats.get("expected_goals", "0.0"),
-                "expected_assists": stats.get("expected_assists", "0.0"),
-                "in_dreamteam": stats.get("in_dreamteam", False),
-            })
+            players.append(
+                {
+                    "id": pid,
+                    "name": info.get("web_name", f"Player {pid}"),
+                    "team": team_names.get(info.get("team"), "Unknown"),
+                    "team_short": team_short.get(info.get("team"), ""),
+                    "position": _POSITIONS.get(info.get("element_type"), "UNK"),
+                    "points": stats.get("total_points", 0),
+                    "minutes": stats.get("minutes", 0),
+                    "goals": stats.get("goals_scored", 0),
+                    "assists": stats.get("assists", 0),
+                    "clean_sheets": stats.get("clean_sheets", 0),
+                    "saves": stats.get("saves", 0),
+                    "bonus": stats.get("bonus", 0),
+                    "bps": stats.get("bps", 0),
+                    "yellow_cards": stats.get("yellow_cards", 0),
+                    "red_cards": stats.get("red_cards", 0),
+                    "expected_goals": stats.get("expected_goals", "0.0"),
+                    "expected_assists": stats.get("expected_assists", "0.0"),
+                    "in_dreamteam": stats.get("in_dreamteam", False),
+                }
+            )
 
         # Sort by live points; when specific players were requested keep them all
         players.sort(key=lambda p: (p["points"], p["bps"]), reverse=True)
@@ -98,10 +99,7 @@ def register_tools(mcp):
         bonus_added = None
         try:
             status_data = await api.get_event_status()
-            day_statuses = [
-                s for s in status_data.get("status", [])
-                if s.get("event") == gameweek_id
-            ]
+            day_statuses = [s for s in status_data.get("status", []) if s.get("event") == gameweek_id]
             if day_statuses:
                 bonus_added = all(s.get("bonus_added", False) for s in day_statuses)
         except Exception as e:
@@ -120,7 +118,7 @@ def register_tools(mcp):
         }
 
     @mcp.tool()
-    async def get_dream_team(gameweek_id: Optional[int] = None) -> Dict[str, Any]:
+    async def get_dream_team(gameweek_id: int | None = None) -> dict[str, Any]:
         """Get the official dream team (highest-scoring XI) for a gameweek
 
         Args:

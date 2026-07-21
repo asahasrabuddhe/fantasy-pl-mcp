@@ -1,6 +1,6 @@
 # src/fpl_mcp/fpl/tools/fixtures.py
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..cache import get_cached_player_data
 from ..resources import fixtures, players, teams
@@ -16,7 +16,7 @@ def register_tools(mcp):
     """Register fixture analysis tools with the MCP server"""
 
     @mcp.tool()
-    async def analyze_player_fixtures(player_name: str, num_fixtures: int = 5) -> Dict[str, Any]:
+    async def analyze_player_fixtures(player_name: str, num_fixtures: int = 5) -> dict[str, Any]:
         """Analyze upcoming fixtures for a player and provide a difficulty rating
 
         Args:
@@ -44,11 +44,11 @@ def register_tools(mcp):
     @mcp.tool()
     async def analyze_fixtures(
         entity_type: str = "player",
-        entity_name: Optional[str] = None,
+        entity_name: str | None = None,
         num_gameweeks: int = 5,
         include_blanks: bool = True,
-        include_doubles: bool = True
-    ) -> Dict[str, Any]:
+        include_doubles: bool = True,
+    ) -> dict[str, Any]:
         """Analyze upcoming fixtures for players, teams, or positions
 
         Args:
@@ -88,7 +88,7 @@ def register_tools(mcp):
             "entity_type": entity_type,
             "entity_name": entity_name,
             "current_gameweek": current_gameweek,
-            "analysis_range": list(range(current_gameweek + 1, current_gameweek + num_gameweeks + 1))
+            "analysis_range": list(range(current_gameweek + 1, current_gameweek + num_gameweeks + 1)),
         }
 
         # Handle each entity type
@@ -104,7 +104,7 @@ def register_tools(mcp):
                 "name": player["name"],
                 "team": player["team"],
                 "position": player["position"],
-                "status": "available" if player["status"] == "a" else "unavailable"
+                "status": "available" if player["status"] == "a" else "unavailable",
             }
 
             # Get fixtures for player's team
@@ -127,20 +127,13 @@ def register_tools(mcp):
             if not team:
                 return {"error": f"No team found matching '{entity_name}'"}
 
-            result["team"] = {
-                "id": team["id"],
-                "name": team["name"],
-                "short_name": team["short_name"]
-            }
+            result["team"] = {"id": team["id"], "name": team["name"], "short_name": team["short_name"]}
 
             # Get fixtures for team
             team_fixtures = await fixtures.get_fixtures_resource(team_name=team["name"])
 
             # Filter to upcoming fixtures
-            upcoming_fixtures = [
-                f for f in team_fixtures
-                if f["gameweek"] in result["analysis_range"]
-            ]
+            upcoming_fixtures = [f for f in team_fixtures if f["gameweek"] in result["analysis_range"]]
 
             # Format fixtures
             formatted_fixtures = []
@@ -149,12 +142,14 @@ def register_tools(mcp):
                 opponent = fixture["away_team"] if is_home else fixture["home_team"]
                 difficulty = fixture["difficulty"]["home" if is_home else "away"]
 
-                formatted_fixtures.append({
-                    "gameweek": fixture["gameweek"],
-                    "opponent": opponent["name"],
-                    "location": "home" if is_home else "away",
-                    "difficulty": difficulty
-                })
+                formatted_fixtures.append(
+                    {
+                        "gameweek": fixture["gameweek"],
+                        "opponent": opponent["name"],
+                        "location": "home" if is_home else "away",
+                        "difficulty": difficulty,
+                    }
+                )
 
             result["fixtures"] = formatted_fixtures
 
@@ -173,7 +168,7 @@ def register_tools(mcp):
                 result["fixture_analysis"] = {
                     "difficulty_score": 0,
                     "fixtures_analyzed": 0,
-                    "assessment": "No upcoming fixtures found"
+                    "assessment": "No upcoming fixtures found",
                 }
 
         elif entity_type == "position":
@@ -193,10 +188,7 @@ def register_tools(mcp):
 
             # Get upcoming fixtures for these teams
             all_fixtures = await fixtures.get_fixtures_resource()
-            upcoming_fixtures = [
-                f for f in all_fixtures
-                if f["gameweek"] in result["analysis_range"]
-            ]
+            upcoming_fixtures = [f for f in all_fixtures if f["gameweek"] in result["analysis_range"]]
 
             # Calculate average fixture difficulty by team
             team_difficulties = {}
@@ -210,29 +202,28 @@ def register_tools(mcp):
 
                     if is_home or is_away:
                         difficulty = fixture["difficulty"]["home" if is_home else "away"]
-                        team_fixtures.append({
-                            "gameweek": fixture["gameweek"],
-                            "opponent": fixture["away_team"]["name"] if is_home else fixture["home_team"]["name"],
-                            "location": "home" if is_home else "away",
-                            "difficulty": difficulty
-                        })
+                        team_fixtures.append(
+                            {
+                                "gameweek": fixture["gameweek"],
+                                "opponent": fixture["away_team"]["name"] if is_home else fixture["home_team"]["name"],
+                                "location": "home" if is_home else "away",
+                                "difficulty": difficulty,
+                            }
+                        )
 
                 if team_fixtures:
                     team_difficulties[team] = {
                         "fixtures": team_fixtures,
                         "difficulty_score": fixture_score(team_fixtures),
-                        "fixtures_analyzed": len(team_fixtures)
+                        "fixtures_analyzed": len(team_fixtures),
                     }
 
             # Sort teams by fixture difficulty (best first)
-            sorted_teams = sorted(
-                team_difficulties.items(),
-                key=lambda x: x[1]["difficulty_score"],
-                reverse=True
-            )
+            sorted_teams = sorted(team_difficulties.items(), key=lambda x: x[1]["difficulty_score"], reverse=True)
 
             result["team_fixtures"] = {
-                team: data for team, data in sorted_teams[:10]  # Top 10 teams with best fixtures
+                team: data
+                for team, data in sorted_teams[:10]  # Top 10 teams with best fixtures
             }
 
             # Add recommendation of teams with best fixtures
@@ -240,7 +231,7 @@ def register_tools(mcp):
                 best_teams = [team for team, data in sorted_teams[:3]]
                 result["recommendations"] = {
                     "teams_with_best_fixtures": best_teams,
-                    "analysis": f"Teams with players in position {normalized_position} with the best upcoming fixtures: {', '.join(best_teams)}"
+                    "analysis": f"Teams with players in position {normalized_position} with the best upcoming fixtures: {', '.join(best_teams)}",
                 }
 
         # Add blank and double gameweek information if requested

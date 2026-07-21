@@ -29,10 +29,13 @@ Mobile is currently not supported.
 ## Features
 
 - **Rich Player Data**: Access comprehensive player statistics from the FPL API
+- **Live Gameweek Scores**: Follow live player points and bonus status while matches are played
 - **Team Information**: Get details about Premier League teams
 - **Gameweek Data**: View current and past gameweek information
 - **Player Search**: Find players by name or team
-- **Player Comparison**: Compare detailed statistics between any two players
+- **Player Comparison**: Compare detailed statistics between any number of players
+- **League Analytics**: Standings, history, team composition, and fixture analysis for classic leagues
+- **Captain Advice & Price Changes**: Data-driven captain suggestions and daily price movement tracking
 
 ## Requirements
 
@@ -41,7 +44,15 @@ Mobile is currently not supported.
 
 ## Installation
 
-### Option 1: Install from PyPI (Recommended)
+### Option 1: Run with uvx (no install needed)
+
+If you use [uv](https://docs.astral.sh/uv/), you can run the server directly:
+
+```bash
+uvx fpl-mcp
+```
+
+### Option 1a: Install from PyPI
 
 ```bash
 pip install fpl-mcp
@@ -175,17 +186,35 @@ npx @modelcontextprotocol/inspector python -m fpl_mcp
 - `fpl://gameweeks/double` - Information about upcoming double gameweeks
 
 ## Available Tools
+
+### Players & Analysis
+- `analyze_players` - Filter and analyze FPL players based on multiple criteria
+- `compare_players` - Compare multiple players across various metrics
+- `get_player_information` - Detailed information and statistics for a specific player
+- `search_fpl_players` - Search for players by name with optional position/team filters
+- `get_price_changes` - Price risers and fallers for the current gameweek
+
+### Fixtures & Gameweeks
 - `get_gameweek_status` - Get precise information about current, previous, and next gameweeks
 - `analyze_player_fixtures` - Analyze upcoming fixtures for a player with difficulty ratings
+- `analyze_fixtures` - Analyze upcoming fixtures for players, teams, or positions
 - `get_blank_gameweeks` - Get information about upcoming blank gameweeks
 - `get_double_gameweeks` - Get information about upcoming double gameweeks
-- `analyze_players` - Filter and analyze FPL players based on multiple criteria
-- `analyze_fixtures` - Analyze upcoming fixtures for players, teams, or positions
-- `compare_players` - Compare multiple players across various metrics
-- `check_fpl_authentication` - Check if FPL authentication is working correctly
-- `get_my_team` - View your authenticated team (requires authentication)
+
+### Live Data
+- `get_gameweek_live_scores` - Live player points and stats while matches are being played
+- `get_dream_team` - The official highest-scoring XI for a gameweek
+
+### Teams, Managers & Leagues
 - `get_team` - View any team with a specific ID (requires authentication)
-- `get_manager_info` - Get manager details (requires authentication)
+- `get_my_team` - View your authenticated team (requires authentication)
+- `get_my_current_team` - Your current squad with selling prices, chips, and transfer state (requires authentication)
+- `get_manager` / `get_manager_info` - Get manager details
+- `get_manager_transfer_history` - A manager's transfers with player names and prices
+- `get_league_standings` - Standings for a classic league
+- `get_league_analytics` - League analysis: overview, history, team composition, decisions, fixtures
+- `suggest_captain` - Ranked captain suggestions for a squad with transparent reasoning
+- `check_fpl_authentication` - Check if FPL authentication is working correctly
 
 ## Prompt Templates
 - `player_analysis_prompt` - Create a prompt for analyzing an FPL player in depth
@@ -223,7 +252,8 @@ fpl-mcp-config setup
 This interactive tool will:
 1. Show you how to copy your OIDC refresh token from the browser
 2. Prompt for the refresh token and your team ID
-3. Save them (encrypted) to `~/.fpl-mcp/credentials.enc`
+3. Encrypt them and store them at `~/.fpl-mcp/credentials.enc` (file permissions restricted to your user)
+4. Offer to remove any legacy plaintext credential files (`.env` / `config.json`) it finds
 
 **Getting your refresh token:**
 1. Log in at https://fantasy.premierleague.com in your browser.
@@ -267,6 +297,8 @@ Alternatively, you can manually configure authentication:
    export FPL_REFRESH_TOKEN=your_refresh_token
    export FPL_TEAM_ID=your_team_id
    ```
+
+Plaintext configurations found in these locations are migrated automatically to encrypted storage on first run, but the encrypted store set up by `fpl-mcp-config setup` is the recommended path. Legacy email/password credentials from older versions can no longer authenticate — re-run setup with a refresh token.
 
 > Note: refresh tokens can be rotated or revoked by FPL. If authentication starts failing,
 > re-run `fpl-mcp-config setup` with a freshly copied token.
@@ -367,7 +399,7 @@ If you use this package in your research or project, please consider citing it:
   author = {Jatia, Rishi and Fantasy PL MCP Contributors},
   title = {Fantasy Premier League MCP Server},
   url = {https://github.com/rishijatia/fantasy-pl-mcp},
-  version = {0.1.0},
+  version = {0.1.7},
   year = {2025},
 }
 ```

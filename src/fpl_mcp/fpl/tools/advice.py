@@ -1,6 +1,6 @@
 # src/fpl_mcp/fpl/tools/advice.py
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..api import api
 from ..auth_manager import get_auth_manager
@@ -35,10 +35,7 @@ def register_tools(mcp):
     """Register advice tools with the MCP server"""
 
     @mcp.tool()
-    async def suggest_captain(
-        team_id: Optional[int] = None,
-        gameweek_id: Optional[int] = None
-    ) -> Dict[str, Any]:
+    async def suggest_captain(team_id: int | None = None, gameweek_id: int | None = None) -> dict[str, Any]:
         """Suggest who to captain from a team's current squad, ranked with reasoning
 
         Combines FPL's own expected points (ep_next), form, points per game,
@@ -124,26 +121,28 @@ def register_tools(mcp):
 
             next_fixture = player_fixtures[0] if player_fixtures else None
 
-            candidates.append({
-                "id": pid,
-                "name": info.get("web_name", f"Player {pid}"),
-                "team": team_names.get(info.get("team"), "Unknown"),
-                "position": _POSITIONS.get(info.get("element_type"), "UNK"),
-                "captain_score": round(score, 2),
-                "components": {
-                    "expected_points_next": expected_points,
-                    "form": form,
-                    "points_per_game": ppg,
-                    "fixture_score": fix_score,
-                    "fixture_assessment": assess_fixtures(fix_score),
-                    "availability": availability,
-                },
-                "next_fixture": next_fixture,
-                "ownership_percent": info.get("selected_by_percent"),
-                "status": "available" if info.get("status") == "a" else "doubtful/unavailable",
-                "news": info.get("news", ""),
-                "was_captain": bool(pick.get("is_captain")),
-            })
+            candidates.append(
+                {
+                    "id": pid,
+                    "name": info.get("web_name", f"Player {pid}"),
+                    "team": team_names.get(info.get("team"), "Unknown"),
+                    "position": _POSITIONS.get(info.get("element_type"), "UNK"),
+                    "captain_score": round(score, 2),
+                    "components": {
+                        "expected_points_next": expected_points,
+                        "form": form,
+                        "points_per_game": ppg,
+                        "fixture_score": fix_score,
+                        "fixture_assessment": assess_fixtures(fix_score),
+                        "availability": availability,
+                    },
+                    "next_fixture": next_fixture,
+                    "ownership_percent": info.get("selected_by_percent"),
+                    "status": "available" if info.get("status") == "a" else "doubtful/unavailable",
+                    "news": info.get("news", ""),
+                    "was_captain": bool(pick.get("is_captain")),
+                }
+            )
 
         candidates.sort(key=lambda c: c["captain_score"], reverse=True)
 
@@ -151,7 +150,8 @@ def register_tools(mcp):
         return {
             "team_id": int(team_id),
             "gameweek": gameweek_id,
-            "recommendation": top and {
+            "recommendation": top
+            and {
                 "name": top["name"],
                 "captain_score": top["captain_score"],
                 "reason": (

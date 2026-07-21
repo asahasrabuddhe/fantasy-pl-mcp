@@ -1,22 +1,24 @@
 # src/fpl_mcp/fpl/auth_manager.py
-import logging
-import requests
 import asyncio
+import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Any
 
-from .cache import cache
-from .rate_limiter import rate_limiter
-from .credential_manager import CredentialManager
-from .utils.gameweek import get_current_gameweek_id
+import requests
+
 from ..config import (
     FPL_API_BASE_URL,
-    FPL_USER_AGENT,
-    FPL_TOKEN_URL,
     FPL_OIDC_CLIENT_ID,
+    FPL_TOKEN_URL,
+    FPL_USER_AGENT,
 )
+from .cache import cache
+from .credential_manager import CredentialManager
+from .rate_limiter import rate_limiter
+from .utils.gameweek import get_current_gameweek_id
 
 logger = logging.getLogger(__name__)
+
 
 class FPLAuthManager:
     """Manages FPL authentication with secure credential handling"""
@@ -56,10 +58,10 @@ class FPLAuthManager:
         self._access_token_expiry = None
     
     @property
-    def team_id(self) -> Optional[str]:
+    def team_id(self) -> str | None:
         """Get the authenticated user's team ID"""
         return self._team_id
-    
+
     @property
     def is_authenticated(self) -> bool:
         """Check if we have a valid, unexpired access token"""
@@ -194,7 +196,7 @@ class FPLAuthManager:
             self._access_token_expiry = None
             raise
 
-    async def make_authed_request(self, url: str) -> Dict[str, Any]:
+    async def make_authed_request(self, url: str) -> dict[str, Any]:
         """Make an authenticated request to FPL API"""
         session = await self.get_session()
 
@@ -217,13 +219,13 @@ class FPLAuthManager:
         response.raise_for_status()
 
         return response.json()
-    
-    async def get_my_team(self, team_id: Optional[int] = None) -> Dict[str, Any]:
+
+    async def get_my_team(self, team_id: int | None = None) -> dict[str, Any]:
         """Get current team for the authenticated user"""
         team_id = team_id or self._team_id
         if not team_id:
             raise ValueError("Team ID must be provided")
-            
+
         url = f"{FPL_API_BASE_URL}/my-team/{team_id}/"
         # Cache data for 60 seconds
         return await cache.get_or_fetch(
@@ -231,13 +233,13 @@ class FPLAuthManager:
             fetch_func=lambda: self.make_authed_request(url),
             ttl=60,
         )
-    
-    async def get_team_for_gameweek(self, team_id: Optional[int] = None, gameweek: int = 1) -> Dict[str, Any]:
+
+    async def get_team_for_gameweek(self, team_id: int | None = None, gameweek: int = 1) -> dict[str, Any]:
         """Get team picks for a specific gameweek"""
         team_id = team_id or self._team_id
         if not team_id:
             raise ValueError("Team ID must be provided")
-            
+
         url = f"{FPL_API_BASE_URL}/entry/{team_id}/event/{gameweek}/picks/"
         # Picks for finished gameweeks are immutable, so cache them for a
         # long time; the current (or a future) gameweek can still change,
@@ -252,16 +254,16 @@ class FPLAuthManager:
             fetch_func=lambda: self.make_authed_request(url),
             ttl=ttl,
         )
-    
-    async def get_entry_data(self, team_id: Optional[int] = None) -> Dict[str, Any]:
+
+    async def get_entry_data(self, team_id: int | None = None) -> dict[str, Any]:
         """Get general information about a team entry"""
         team_id = team_id or self._team_id
         if not team_id:
             raise ValueError("Team ID must be provided")
-            
+
         url = f"{FPL_API_BASE_URL}/entry/{team_id}/"
         return await self.make_authed_request(url)
-        
+
     async def close(self):
         """Close the session"""
         if self._session is not None:
@@ -270,8 +272,10 @@ class FPLAuthManager:
         self._access_token = None
         self._access_token_expiry = None
 
+
 # Singleton instance
 _auth_manager = None
+
 
 def get_auth_manager():
     """Get the singleton auth manager instance"""

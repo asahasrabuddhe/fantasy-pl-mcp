@@ -9,4 +9,4 @@ except PackageNotFoundError:
     __version__ = "0.0.0"
 
 # Import main components for easy access
-from fpl_mcp.__main__ import main
+from fpl_mcp.__main__ import main as main

@@ -3,7 +3,7 @@ import sys
 import tempfile
 
 # Add the src directory to the path so pytest can import the package
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 # Point the disk cache at a temporary directory BEFORE fpl_mcp is imported,
 # so tests never read or write the user's real cache. Held in a module-level

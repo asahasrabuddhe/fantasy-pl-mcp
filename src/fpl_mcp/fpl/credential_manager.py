@@ -1,17 +1,16 @@
 # src/fpl_mcp/fpl/credential_manager.py
-import os
-import json
+import base64
 import getpass
+import json
+import logging
+import os
 import platform
 import uuid
-import logging
 from pathlib import Path
-from typing import Optional, Tuple, Dict
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +69,7 @@ class CredentialManager:
         key = base64.urlsafe_b64encode(kdf.derive(key_material))
         return key
 
-    def _encrypt_data(self, data: Dict[str, str]) -> bytes:
+    def _encrypt_data(self, data: dict[str, str]) -> bytes:
         """Encrypt credential data"""
         # Generate random salt
         salt = os.urandom(16)
@@ -86,7 +85,7 @@ class CredentialManager:
         # Prepend salt to encrypted data
         return salt + encrypted_data
 
-    def _decrypt_data(self, encrypted_bytes: bytes) -> Dict[str, str]:
+    def _decrypt_data(self, encrypted_bytes: bytes) -> dict[str, str]:
         """Decrypt credential data"""
         # Extract salt (first 16 bytes)
         salt = encrypted_bytes[:16]
@@ -136,7 +135,7 @@ class CredentialManager:
             return
         self.store_credentials(refresh_token, team_id)
 
-    def load_credentials(self) -> Tuple[Optional[str], Optional[str]]:
+    def load_credentials(self) -> tuple[str | None, str | None]:
         """Load credentials, preferring encrypted storage.
 
         Returns a (refresh_token, team_id) tuple.
@@ -172,7 +171,7 @@ class CredentialManager:
 
     def _load_legacy_credentials(
         self,
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> tuple[str | None, str | None]:
         """Load credentials from legacy plaintext sources.
 
         Only the refresh token and team id are usable now; any email/password
@@ -202,7 +201,7 @@ class CredentialManager:
         # Check legacy JSON file
         if self._legacy_json_file.exists():
             try:
-                with open(self._legacy_json_file, "r") as f:
+                with open(self._legacy_json_file) as f:
                     config = json.load(f)
                     refresh_token = config.get("refresh_token")
                     team_id = config.get("team_id")

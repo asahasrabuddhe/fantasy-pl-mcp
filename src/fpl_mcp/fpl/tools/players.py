@@ -1,22 +1,22 @@
 """Player information tools for Fantasy Premier League."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
-from ..resources.players import get_player_by_id, find_players_by_name
-from ..resources.gameweeks import get_current_gameweek_resource
 from ..resources.fixtures import get_player_fixtures, get_player_gameweek_history
+from ..resources.gameweeks import get_current_gameweek_resource
+from ..resources.players import find_players_by_name, get_player_by_id
 from ..utils.difficulty import assess_fixtures, fixture_score
 
 
 async def get_player_info(
-    player_id: Optional[int] = None,
-    player_name: Optional[str] = None,
-    start_gameweek: Optional[int] = None,
-    end_gameweek: Optional[int] = None,
+    player_id: int | None = None,
+    player_name: str | None = None,
+    start_gameweek: int | None = None,
+    end_gameweek: int | None = None,
     include_history: bool = True,
-    include_fixtures: bool = True
-) -> Dict[str, Any]:
+    include_fixtures: bool = True,
+) -> dict[str, Any]:
     """
     Get detailed information for a specific player, optionally filtering stats by gameweek range.
 
@@ -49,9 +49,7 @@ async def get_player_info(
             player_id = player.get("id")
 
     if not player:
-        return {
-            "error": f"Player not found: ID={player_id}, name={player_name}"
-        }
+        return {"error": f"Player not found: ID={player_id}, name={player_name}"}
 
     # Prepare result with basic player info
     result = {
@@ -81,7 +79,7 @@ async def get_player_info(
             "status": "available" if player.get("status") == "a" else "unavailable",
             "news": player.get("news"),
             "chance_of_playing_next_round": player.get("chance_of_playing_next_round"),
-        }
+        },
     }
 
     # Add expected stats if available
@@ -106,11 +104,11 @@ async def get_player_info(
     # Convert Optional[int] to int with defaults
     start_gw: int = 1 if start_gameweek is None else max(1, start_gameweek)
     end_gw: int = current_gw if end_gameweek is None else min(current_gw, end_gameweek)
-    
+
     # Ensure start <= end
     if start_gw > end_gw:
         start_gw = end_gw
-        
+
     # Set the validated values as int (not Optional[int])
     start_gameweek = start_gw
     end_gameweek = end_gw
@@ -119,16 +117,14 @@ async def get_player_info(
     if include_history and "history" in player:
         # Filter history by gameweek range
         filtered_history = [
-            gw for gw in player.get("history", [])
-            if start_gameweek <= gw.get("round", 0) <= end_gameweek
+            gw for gw in player.get("history", []) if start_gameweek <= gw.get("round", 0) <= end_gameweek
         ]
 
         # Get detailed gameweek history
         player_id_value = player.get("id")
         if player_id_value is not None:
             gw_count = max(1, end_gameweek - start_gameweek + 1)
-            gameweek_history = await get_player_gameweek_history(
-                [player_id_value], gw_count)
+            gameweek_history = await get_player_gameweek_history([player_id_value], gw_count)
         else:
             gameweek_history = None
 
@@ -144,10 +140,10 @@ async def get_player_info(
                 for gw_data in history_data:
                     gw_num = gw_data.get("round")
                     # Find matching detailed gameweek
-                    matching_detailed = next((
-                        gw for gw in detailed_history
-                        if gw.get("round") == gw_num or gw.get("gameweek") == gw_num
-                    ), None)
+                    matching_detailed = next(
+                        (gw for gw in detailed_history if gw.get("round") == gw_num or gw.get("gameweek") == gw_num),
+                        None,
+                    )
 
                     if matching_detailed:
                         for key, value in matching_detailed.items():
@@ -214,11 +210,8 @@ async def get_player_info(
 
 
 async def search_players(
-    query: str,
-    position: Optional[str] = None,
-    team: Optional[str] = None,
-    limit: int = 5
-) -> Dict[str, Any]:
+    query: str, position: str | None = None, team: str | None = None, limit: int = 5
+) -> dict[str, Any]:
     """
     Search for players by name with optional filtering by position and team.
 
@@ -244,9 +237,9 @@ async def search_players(
     # Apply team filter if specified
     if team and matches:
         matches = [
-            p for p in matches
-            if team.lower() in p.get("team", "").lower() or
-            team.lower() in p.get("team_short", "").lower()
+            p
+            for p in matches
+            if team.lower() in p.get("team", "").lower() or team.lower() in p.get("team_short", "").lower()
         ]
 
     # Limit results
@@ -259,21 +252,22 @@ async def search_players(
             "team": team,
         },
         "total_matches": len(matches),
-        "players": matches
+        "players": matches,
     }
 
 
 def register_tools(mcp):
     """Register player-related tools with MCP."""
+
     @mcp.tool()
     async def get_player_information(
-        player_id: Optional[int] = None,
-        player_name: Optional[str] = None,
-        start_gameweek: Optional[int] = None,
-        end_gameweek: Optional[int] = None,
+        player_id: int | None = None,
+        player_name: str | None = None,
+        start_gameweek: int | None = None,
+        end_gameweek: int | None = None,
         include_history: bool = True,
-        include_fixtures: bool = True
-    ) -> Dict[str, Any]:
+        include_fixtures: bool = True,
+    ) -> dict[str, Any]:
         """Get detailed information and statistics for a specific player
 
         Args:
@@ -289,27 +283,19 @@ def register_tools(mcp):
         """
         # Handle case when a dictionary is passed instead of expected types
         if isinstance(player_name, dict):
-            if 'player_name' in player_name:
-                player_name = player_name['player_name']
-            elif 'query' in player_name:
-                player_name = player_name['query']
-                
+            if "player_name" in player_name:
+                player_name = player_name["player_name"]
+            elif "query" in player_name:
+                player_name = player_name["query"]
+
         return await get_player_info(
-            player_id,
-            player_name,
-            start_gameweek,
-            end_gameweek,
-            include_history,
-            include_fixtures
+            player_id, player_name, start_gameweek, end_gameweek, include_history, include_fixtures
         )
 
     @mcp.tool()
     async def search_fpl_players(
-        query: str,
-        position: Optional[str] = None,
-        team: Optional[str] = None,
-        limit: int = 5
-    ) -> Dict[str, Any]:
+        query: str, position: str | None = None, team: str | None = None, limit: int = 5
+    ) -> dict[str, Any]:
         """Search for FPL players by name with optional filtering
 
         Args:
@@ -322,16 +308,13 @@ def register_tools(mcp):
             List of matching players with details
         """
         # Handle case when a dictionary is passed instead of string
-        if isinstance(query, dict) and 'query' in query:
-            query = query['query']
+        if isinstance(query, dict) and "query" in query:
+            query = query["query"]
 
         return await search_players(query, position, team, limit)
 
     @mcp.tool()
-    async def get_price_changes(
-        direction: Optional[str] = None,
-        limit: int = 20
-    ) -> Dict[str, Any]:
+    async def get_price_changes(direction: str | None = None, limit: int = 20) -> dict[str, Any]:
         """Get players whose price changed in the current gameweek (risers and fallers)
 
         Args:
@@ -379,10 +362,12 @@ def register_tools(mcp):
             key=lambda p: (p.get("cost_change_event", 0), -p.get("transfers_out_event", 0)),
         )
 
-        result = {"summary": {
-            "total_risers": len(risers),
-            "total_fallers": len(fallers),
-        }}
+        result = {
+            "summary": {
+                "total_risers": len(risers),
+                "total_fallers": len(fallers),
+            }
+        }
         if direction in (None, "risers"):
             result["risers"] = [format_player(p) for p in risers[:limit]]
         if direction in (None, "fallers"):

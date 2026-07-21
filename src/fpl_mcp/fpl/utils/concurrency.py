@@ -1,12 +1,13 @@
 import asyncio
-from typing import Any, Awaitable, Iterable, List
+from collections.abc import Awaitable, Iterable
+from typing import Any
 
 
 async def gather_limited(
     coros: Iterable[Awaitable[Any]],
     limit: int = 5,
     return_exceptions: bool = False,
-) -> List[Any]:
+) -> list[Any]:
     """Run awaitables concurrently, at most `limit` at a time.
 
     A bounded alternative to asyncio.gather so that fan-out over many
@@ -27,6 +28,4 @@ async def gather_limited(
         async with semaphore:
             return await coro
 
-    return await asyncio.gather(
-        *(_run(c) for c in coros), return_exceptions=return_exceptions
-    )
+    return await asyncio.gather(*(_run(c) for c in coros), return_exceptions=return_exceptions)
